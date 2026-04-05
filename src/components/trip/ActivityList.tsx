@@ -381,7 +381,6 @@ export function ActivityList({
               isActive={false}
               onClick={() => {}}
               onDelete={() => {}}
-              onEdit={() => {}}
             />
           </div>
         )}
