@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
+
+@layer base {
+  body {
+    @apply bg-sea-50 text-slate-800 antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  * { @apply box-border; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-sea-200 rounded-full; }
+}
+
+@layer components {
+  /* ─── Buttons ─── */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-sm
+           bg-gradient-to-r from-sea-500 to-sea-600 text-white
+           shadow-soft hover:shadow-lift hover:-translate-y-0.5
+           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
+  }
+  .btn-sage {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-sm
+           bg-gradient-to-r from-sage-400 to-sage-500 text-white
+           shadow-soft hover:shadow-lift hover:-translate-y-0.5
+           transition-all duration-200;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl font-medium text-sm
+           text-sea-700 bg-sea-50 border border-sea-100
+           hover:bg-sea-100 hover:border-sea-200
+           transition-all duration-150;
+  }
+  .btn-outline {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-sm
+           bg-white text-sea-700 border-2 border-sea-200
+           hover:border-sea-400 hover:shadow-soft hover:-translate-y-0.5
+           transition-all duration-200;
+  }
+
+  /* ─── Cards ─── */
+  .card {
+    @apply bg-white rounded-3xl border border-sea-100/60 shadow-soft;
+  }
+  .card-hover {
+    @apply card hover:shadow-lift hover:-translate-y-1 transition-all duration-200 cursor-pointer;
+  }
+
+  /* ─── Inputs ─── */
+  .input {
+    @apply w-full px-4 py-3 bg-white border-2 border-sea-100 rounded-2xl text-sm
+           focus:outline-none focus:border-sea-400 focus:ring-4 focus:ring-sea-100
+           placeholder:text-slate-400 transition-all duration-150;
+  }
+  .label {
+    @apply block text-sm font-semibold text-slate-600 mb-2;
+  }
+
+  /* ─── Badges ─── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+
+  /* ─── Gradient text ─── */
+  .text-gradient {
+    @apply bg-gradient-to-r from-sea-600 to-sage-500 bg-clip-text text-transparent;
+  }
+}
+
+/* ─── Map overrides ─── */
+.leaflet-container {
+  border-radius: 1.5rem;
+  font-family: 'Inter', sans-serif;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 1rem !important;
+  box-shadow: 0 4px 24px rgba(8,145,178,0.15) !important;
+  border: 1px solid rgba(8,145,178,0.1);
+}
+.leaflet-popup-tip { background: white !important; }
+.leaflet-control-zoom a {
+  border-radius: 0.5rem !important;
+  color: #0891b2 !important;
+}
+
+/* ─── Hide scrollbars on pill tabs ─── */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── Active press effect for interactive cards ─── */
+.card-hover:active, .btn-primary:active, .btn-outline:active, .btn-sage:active {
+  transform: scale(0.98) translateY(1px);
+}
+
+/* ─── Smooth focus rings ─── */
+*:focus-visible {
+  outline: 2px solid theme('colors.sea.400');
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* ─── dnd-kit drag: hide native drag ghost ─── */
+[data-dnd-kit-dragging] {
+  cursor: grabbing !important;
+}
