@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildItineraryWithClaude } from '@/lib/itinerary/claude-builder'
+import { buildItineraryWithOSM } from '@/lib/itinerary/osm-builder'
 import { searchYouTubeVlogs } from '@/lib/youtube/search'
 import { buildItinerary } from '@/lib/itinerary/builder'
 import { createClient } from '@/lib/supabase/server'
@@ -14,15 +15,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // 1. Generate itinerary — Claude if key available, else YouTube+builder fallback
+    // 1. Generate itinerary
+    // Priority: Claude (if key) → OpenStreetMap real places → YouTube fallback
     let days
     const hasAnthropicKey = !!(process.env.ANTHROPIC_API_KEY)
 
     if (hasAnthropicKey) {
       days = await buildItineraryWithClaude(destination, startDate, endDate, preferences)
     } else {
-      const videos = await searchYouTubeVlogs(destination, preferences.dietary)
-      days = buildItinerary(destination, startDate, endDate, preferences, videos)
+      // Try OSM — real place names + lat/lng from OpenStreetMap, free, no key needed
+      const osmDays = await buildItineraryWithOSM(destination, startDate, endDate, preferences)
+      if (osmDays && osmDays.some(d => d.activities.length > 0)) {
+        days = osmDays
+      } else {
+        // Last resort: YouTube string-extraction fallback
+        const videos = await searchYouTubeVlogs(destination, preferences.dietary)
+        days = buildItinerary(destination, startDate, endDate, preferences, videos)
+      }
     }
 
     // 2. Save to Supabase (if user authenticated)

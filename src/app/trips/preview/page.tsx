@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import {
   MapPin, Clock, Youtube, ExternalLink, Calendar, Star, Info, Play,
   ChevronDown, ChevronUp, Share2, Plus, Navigation, GripVertical,
-  Trash2, Lock, Utensils, Wallet, X, Check,
+  Trash2, Lock, Wallet, X, Check, Copy, Plane,
   Train, Bus, Car, Ticket, AlertCircle, Sparkles
 } from 'lucide-react'
 import { ItineraryDay, Activity, SourceVideo } from '@/lib/types'
@@ -98,17 +98,72 @@ function getTransferData(destination: string) {
 
 const MODE_ICON: Record<string, React.ElementType> = { train: Train, bus: Bus, car: Car }
 
+function mapsLink(icon: string, airport: string, city: string) {
+  const o = encodeURIComponent(airport)
+  const d = encodeURIComponent(city)
+  const mode = icon === 'train' ? 'transit' : icon === 'bus' ? 'transit' : 'driving'
+  return `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=${mode}`
+}
+
+function TransportOptionCard({ opt, airport, city, reverse = false }: {
+  opt: { mode: string; icon: string; time: string; cost: string; costNote: string; where: string; tips: string; badge?: string }
+  airport: string; city: string; reverse?: boolean
+}) {
+  const Icon = MODE_ICON[opt.icon] ?? Car
+  const origin = reverse ? city : airport
+  const dest   = reverse ? airport : city
+  return (
+    <div className="relative bg-white rounded-2xl border border-slate-100 p-3.5 shadow-soft">
+      {opt.badge && (
+        <span className="absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sage-100 text-sage-700">
+          {opt.badge}
+        </span>
+      )}
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-xl bg-sea-50 border border-sea-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Icon size={16} className="text-sea-600" />
+        </div>
+        <div className="flex-1 min-w-0 pr-14">
+          <p className="font-bold text-slate-900 text-sm">{opt.mode}</p>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <span className="flex items-center gap-1 text-xs text-slate-500"><Clock size={10} /> {opt.time}</span>
+            <span className="text-xs font-bold text-sea-700">{opt.cost}</span>
+            {opt.costNote && <span className="text-xs text-slate-400">{opt.costNote}</span>}
+          </div>
+        </div>
+      </div>
+      <div className="mt-2.5 flex gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-100">
+        <MapPin size={11} className="text-amber-500 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-[11px] font-bold text-amber-800">Where to get it</p>
+          <p className="text-[11px] text-amber-700 leading-relaxed">{opt.where}</p>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-slate-500 leading-relaxed flex gap-1.5">
+        <Sparkles size={10} className="text-sea-400 mt-0.5 flex-shrink-0" />{opt.tips}
+      </p>
+      <div className="mt-2.5 flex gap-2">
+        <a href={mapsLink(opt.icon, origin, dest)} target="_blank" rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-sea-50 hover:bg-sea-100 border border-sea-100 text-xs font-bold text-sea-700 transition-colors">
+          <Navigation size={11} /> Open in Maps
+        </a>
+        {opt.icon === 'car' && (
+          <a href="https://m.uber.com/ul/?action=setPickup" target="_blank" rel="noopener noreferrer"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors">
+            <Car size={11} /> Uber / Grab
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function AirportTransferCard({ destination }: { destination: string }) {
   const [open, setOpen] = useState(false)
   const data = getTransferData(destination)
-
   return (
     <div className="mx-4 mb-3 rounded-3xl border-2 border-sea-200 bg-gradient-to-br from-white to-sea-50 overflow-hidden shadow-soft">
-      {/* Header */}
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-3 p-4 text-left"
-      >
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 p-4 text-left">
         <div className="w-10 h-10 rounded-2xl bg-sea-500 flex items-center justify-center flex-shrink-0">
           <Ticket size={18} className="text-white" />
         </div>
@@ -120,55 +175,101 @@ function AirportTransferCard({ destination }: { destination: string }) {
           <ChevronDown size={14} className="text-sea-600" />
         </div>
       </button>
-
       {open && (
         <div className="px-4 pb-4 space-y-2.5 animate-fade-up">
           <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-3">
             <AlertCircle size={11} className="text-amber-400" />
-            Compare options below — prices are approximate and may vary.
+            Prices are approximate. Tap any option to open directions.
           </p>
-          {data.options.map((opt, i) => {
-            const Icon = MODE_ICON[opt.icon] ?? Car
-            return (
-              <div key={i} className="relative bg-white rounded-2xl border border-slate-100 p-3.5 shadow-soft">
-                {opt.badge && (
-                  <span className="absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sage-100 text-sage-700">
-                    {opt.badge}
-                  </span>
-                )}
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-sea-50 border border-sea-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Icon size={16} className="text-sea-600" />
-                  </div>
-                  <div className="flex-1 min-w-0 pr-14">
-                    <p className="font-bold text-slate-900 text-sm">{opt.mode}</p>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1 text-xs text-slate-500">
-                        <Clock size={10} /> {opt.time}
-                      </span>
-                      <span className="text-xs font-bold text-sea-700">{opt.cost}</span>
-                      {opt.costNote && <span className="text-xs text-slate-400">{opt.costNote}</span>}
-                    </div>
-                  </div>
-                </div>
-                {/* Where to collect */}
-                <div className="mt-2.5 flex gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-100">
-                  <MapPin size={11} className="text-amber-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-[11px] font-bold text-amber-800">Where to get it</p>
-                    <p className="text-[11px] text-amber-700 leading-relaxed">{opt.where}</p>
-                  </div>
-                </div>
-                {/* Tip */}
-                <p className="mt-2 text-xs text-slate-500 leading-relaxed flex gap-1.5">
-                  <Sparkles size={10} className="text-sea-400 mt-0.5 flex-shrink-0" />
-                  {opt.tips}
-                </p>
-              </div>
-            )
-          })}
+          {data.options.map((opt, i) => (
+            <TransportOptionCard key={i} opt={opt} airport={data.airport} city={destination} />
+          ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function ReturnToAirportCard({ destination }: { destination: string }) {
+  const [open, setOpen] = useState(false)
+  const data = getTransferData(destination)
+  return (
+    <div className="mx-4 mb-3 rounded-3xl border-2 border-sage-200 bg-gradient-to-br from-white to-sage-50 overflow-hidden shadow-soft">
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 p-4 text-left">
+        <div className="w-10 h-10 rounded-2xl bg-sage-500 flex items-center justify-center flex-shrink-0">
+          <Plane size={18} className="text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-extrabold text-slate-900 text-sm">🏠 Hotel → Airport</p>
+          <p className="text-xs text-slate-500 truncate">{data.airport} · allow 3h for international, 2h domestic</p>
+        </div>
+        <div className={cn('w-7 h-7 rounded-full bg-sage-100 flex items-center justify-center transition-transform flex-shrink-0', open && 'rotate-180')}>
+          <ChevronDown size={14} className="text-sage-600" />
+        </div>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-2.5 animate-fade-up">
+          <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-3">
+            <AlertCircle size={11} className="text-amber-400" />
+            Same routes in reverse. Leave early — airport queues add time.
+          </p>
+          {data.options.map((opt, i) => (
+            <TransportOptionCard key={i} opt={opt} airport={data.airport} city={destination} reverse />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ShareModal({ destination, startDate, endDate, days, onClose }: {
+  destination: string; startDate: string; endDate: string
+  days: ItineraryDay[]; onClose: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+  const text = buildShareText(destination, startDate, endDate, days)
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-6 sm:pb-0"
+      onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 animate-pop" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-extrabold text-slate-900 text-lg">Share itinerary</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+            <X size={15} className="text-slate-500" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <a href={waUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3.5 rounded-2xl bg-green-50 border border-green-100 hover:bg-green-100 transition-colors">
+            <div className="w-10 h-10 rounded-2xl bg-green-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-lg font-bold">W</span>
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 text-sm">WhatsApp</p>
+              <p className="text-xs text-slate-500">Send your full itinerary to the group</p>
+            </div>
+          </a>
+          <button onClick={handleCopy}
+            className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors text-left">
+            <div className="w-10 h-10 rounded-2xl bg-slate-200 flex items-center justify-center flex-shrink-0">
+              {copied ? <Check size={16} className="text-sage-600" /> : <Copy size={16} className="text-slate-600" />}
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 text-sm">{copied ? 'Copied!' : 'Copy to clipboard'}</p>
+              <p className="text-xs text-slate-500">Paste into any message or note</p>
+            </div>
+          </button>
+        </div>
+        <p className="text-center text-xs text-slate-400 mt-4">Includes all {days.length} days · {days.reduce((s,d)=>s+d.activities.length,0)} stops</p>
+      </div>
     </div>
   )
 }
@@ -411,8 +512,8 @@ export default function TripPreviewPage() {
   const [activeDay, setActiveDay]           = useState(0)
   const [activeActivityId, setActiveActivityId] = useState('')
   const [showAddModal, setShowAddModal]     = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
   const [dragId, setDragId]                 = useState<string|null>(null)
-  const [copied, setCopied]                 = useState(false)
 
   useEffect(() => {
     const raw = sessionStorage.getItem('roamriot_itinerary')
@@ -522,6 +623,15 @@ export default function TripPreviewPage() {
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
       {showAddModal && <AddActivityModal onAdd={addActivity} onClose={()=>setShowAddModal(false)}/>}
+      {showShareModal && itinerary && (
+        <ShareModal
+          destination={itinerary.destination}
+          startDate={itinerary.startDate}
+          endDate={itinerary.endDate}
+          days={days}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
 
       {/* ─── Nav ─── */}
       <nav className="bg-white border-b border-sea-100 flex-shrink-0 z-20">
@@ -537,18 +647,9 @@ export default function TripPreviewPage() {
               <Youtube size={10}/> {vlogCount} from vlogs
             </span>
             <Link href="/expenses" className="btn-ghost text-xs px-3 py-1.5"><Wallet size={12}/> Budget</Link>
-            <Link href="/food" className="btn-ghost text-xs px-3 py-1.5"><Utensils size={12}/> Food</Link>
             <Link href="/events" className="btn-ghost text-xs px-3 py-1.5"><Sparkles size={12}/> Events</Link>
-            <button
-              onClick={async () => {
-                const text = buildShareText(destination, startDate, endDate, days)
-                await navigator.clipboard.writeText(text)
-                setCopied(true)
-                setTimeout(() => setCopied(false), 2000)
-              }}
-              className="btn-ghost text-xs px-3 py-1.5"
-            >
-              {copied ? <Check size={12}/> : <Share2 size={12}/>} {copied ? 'Copied!' : 'Share'}
+            <button onClick={() => setShowShareModal(true)} className="btn-ghost text-xs px-3 py-1.5">
+              <Share2 size={12}/> Share
             </button>
           </div>
         </div>
@@ -573,8 +674,8 @@ export default function TripPreviewPage() {
 
           {/* Day summary */}
 
-          {/* Airport transfer card — Day 1 only */}
           {activeDay === 0 && <AirportTransferCard destination={destination} />}
+          {activeDay === days.length - 1 && days.length > 1 && <ReturnToAirportCard destination={destination} />}
 
           {/* Add stop button */}
           <div className="px-4 pb-2 flex items-center justify-between">
@@ -640,9 +741,6 @@ export default function TripPreviewPage() {
       </div>
 
       {/* Mobile map FAB */}
-      <Link href="/food" className="sm:hidden fixed bottom-20 right-5 z-30 btn-sage rounded-full w-12 h-12 flex items-center justify-center p-0 shadow-lift">
-        <Utensils size={18}/>
-      </Link>
       <button onClick={()=>setShowAddModal(true)} className="sm:hidden fixed bottom-5 right-5 z-30 btn-primary rounded-full w-14 h-14 flex items-center justify-center p-0 shadow-lift">
         <Plus size={22}/>
       </button>
