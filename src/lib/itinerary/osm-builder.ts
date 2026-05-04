@@ -1,5 +1,6 @@
 import { ItineraryDay, Activity, ActivityCategory, TripPreferences } from '@/lib/types'
 import { getDayDates } from '@/lib/utils'
+import { enrichPlaces, EnrichablePlace } from './enrichment'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 interface OSMNode {
@@ -262,6 +263,7 @@ export async function buildItineraryWithOSM(
   startDate: string,
   endDate: string,
   preferences: TripPreferences,
+  youTubeTitles: string[] = [],
 ): Promise<ItineraryDay[] | null> {
   // 1. Geocode destination
   const geo = await geocodeDestination(destination)
@@ -276,10 +278,18 @@ export async function buildItineraryWithOSM(
   ]
 
   // 2. Fetch real places from OpenStreetMap
-  const nodes = await fetchOSMPlaces(cityBbox)
-  if (nodes.length < 3) return null
+  let nodes = await fetchOSMPlaces(cityBbox)
 
-  // 3. Rank and filter places
+  // If sparse data, retry with a wider bbox (covers smaller towns / offbeat destinations)
+  if (nodes.length < 5) {
+    const wideBbox: [number, number, number, number] = [
+      geo.lat - 0.5, geo.lat + 0.5,
+      geo.lon - 0.5, geo.lon + 0.5,
+    ]
+    nodes = await fetchOSMPlaces(wideBbox)
+  }
+
+  // 3. Rank and filter OSM places
   const ranked: RankedPlace[] = nodes
     .filter(n => n.tags?.name)
     .reduce<RankedPlace[]>((acc, n) => {
@@ -299,11 +309,9 @@ export async function buildItineraryWithOSM(
       return acc
     }, [])
     .sort((a, b) => b.score - a.score)
-    .slice(0, 80) // take top 80 most notable places
+    .slice(0, 80)
 
-  if (ranked.length < 3) return null
-
-  // 4. Fetch Wikipedia descriptions for top 12 places (avoid rate limits)
+  // 4. Fetch Wikipedia descriptions for top attractions
   const topForWiki = ranked.filter(p => p.category === 'attraction').slice(0, 12)
   await Promise.all(
     topForWiki.map(async p => {
@@ -311,21 +319,46 @@ export async function buildItineraryWithOSM(
     }),
   )
 
-  // 5. Cluster by day using proximity
+  // 5. Enrich with external sources (Reddit, Atlas Obscura, Wikipedia sections, blogs, YouTube titles)
+  //    External sources boost scores of real OSM places + add validated new places
+  //    This step is optional — itinerary is built even if enrichment fails
+  const enrichableOSM: EnrichablePlace[] = ranked.map(p => ({ ...p, sources: ['osm'] }))
+  let finalPlaces: RankedPlace[]
+
+  try {
+    const enriched = await enrichPlaces(enrichableOSM, destination, cityBbox, youTubeTitles)
+    // Convert back to RankedPlace format, preserving enrichment scores
+    finalPlaces = enriched.map(p => ({
+      id:          typeof p.id === 'number' ? p.id : 0,
+      name:        p.name,
+      lat:         p.lat,
+      lon:         p.lon,
+      category:    p.category as RankedPlace['category'],
+      description: p.description,
+      duration:    p.duration,
+      score:       p.score,
+      priceRange:  p.priceRange,
+    }))
+  } catch {
+    finalPlaces = ranked
+  }
+
+  if (finalPlaces.length < 3) return null
+
+  // 6. Cluster by day using proximity
   const numDays = Math.max(1, Math.round(
     (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000
   ) + 1)
   const dates = getDayDates(startDate, numDays)
-  const dayPlaces = clusterByDay(ranked, numDays)
+  const dayPlaces = clusterByDay(finalPlaces, numDays)
 
-  // 6. Build ItineraryDay[]
+  // 7. Build ItineraryDay[]
   return dates.map((date, i) => {
     const places = dayPlaces[i] ?? []
     const isDay1 = i === 0
     const isLastDay = i === numDays - 1
     const activities = assignTimes(places, isDay1, isLastDay, preferences)
 
-    // Re-assign day_id placeholder (will be replaced on DB insert)
     const dayId = `osm-day-${i}`
     return {
       id: dayId,

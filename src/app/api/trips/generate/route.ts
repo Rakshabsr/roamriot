@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { buildItineraryWithClaude } from '@/lib/itinerary/claude-builder'
 import { buildItineraryWithOSM } from '@/lib/itinerary/osm-builder'
 import { searchYouTubeVlogs } from '@/lib/youtube/search'
-import { buildItinerary } from '@/lib/itinerary/builder'
 import { createClient } from '@/lib/supabase/server'
 import { GenerateItineraryRequest } from '@/lib/types'
 
@@ -16,21 +15,33 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Generate itinerary
-    // Priority: Claude (if key) → OpenStreetMap real places → YouTube fallback
+    // Priority: Claude (if key) → OSM + multi-source enrichment (Reddit, Atlas Obscura, Wikipedia, blogs, YouTube titles)
+    //
+    // YouTube videos are fetched for their TITLES only — used as scoring signals
+    // that boost OSM place scores. We never extract fake place names from video text.
     let days
     const hasAnthropicKey = !!(process.env.ANTHROPIC_API_KEY)
 
     if (hasAnthropicKey) {
       days = await buildItineraryWithClaude(destination, startDate, endDate, preferences)
     } else {
-      // Try OSM — real place names + lat/lng from OpenStreetMap, free, no key needed
-      const osmDays = await buildItineraryWithOSM(destination, startDate, endDate, preferences)
-      if (osmDays && osmDays.some(d => d.activities.length > 0)) {
-        days = osmDays
-      } else {
-        // Last resort: YouTube string-extraction fallback
-        const videos = await searchYouTubeVlogs(destination, preferences.dietary)
-        days = buildItinerary(destination, startDate, endDate, preferences, videos)
+      // Fetch YouTube titles as enrichment signals (fire in parallel, non-blocking)
+      const ytTitlesPromise = searchYouTubeVlogs(destination, preferences.dietary)
+        .then(videos => videos.map(v => v.title))
+        .catch(() => [] as string[])
+
+      const ytTitles = await ytTitlesPromise
+
+      // OSM + enrichment: real places only, scored by Reddit / Atlas Obscura / Wikipedia / blogs / YouTube
+      days = await buildItineraryWithOSM(destination, startDate, endDate, preferences, ytTitles)
+
+      if (!days || !days.some(d => d.activities.length > 0)) {
+        // Very rare: destination not found in OSM even with wide bbox
+        // Return a clear error rather than fake data
+        return NextResponse.json(
+          { error: `We couldn't find enough real places for "${destination}" yet. Try a nearby larger city or check the spelling.` },
+          { status: 422 }
+        )
       }
     }
 
