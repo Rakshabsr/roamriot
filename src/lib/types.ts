@@ -1,5 +1,5 @@
 export type DietaryPreference = 'none' | 'vegetarian' | 'vegan' | 'jain'
-export type TravelStyle = 'backpacker' | 'comfort' | 'luxury'
+export type TravelStyle = 'couple' | 'three_friends' | 'girls_gang' | 'boys_gang' | 'solo_female' | 'solo_male' | 'family' | 'senior'
 export type BudgetRange = 'budget' | 'mid' | 'comfort' | 'splurge'
 export type ActivityCategory = 'food' | 'attraction' | 'transport' | 'accommodation' | 'experience' | 'essentials'
 

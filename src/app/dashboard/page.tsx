@@ -57,8 +57,8 @@ function getDietLabel(dietary?: string): { emoji: string; label: string } | null
 
 // ─── Mock trips shown when Supabase is empty ────────────────────────────────
 const MOCK_TRIPS: Trip[] = [
-  { id: 'mock-1', user_id: '', destination: 'Jaipur, Rajasthan', start_date: '2026-04-10', end_date: '2026-04-14', preferences: { dietary: 'vegetarian', budget: 'budget', travelStyle: 'comfort', travelers: 2 } as Trip['preferences'], created_at: new Date().toISOString() },
-  { id: 'mock-2', user_id: '', destination: 'Bali, Indonesia',   start_date: '2026-05-20', end_date: '2026-05-26', preferences: { dietary: 'none',        budget: 'mid',    travelStyle: 'comfort', travelers: 1 } as Trip['preferences'], created_at: new Date().toISOString() },
+  { id: 'mock-1', user_id: '', destination: 'Jaipur, Rajasthan', start_date: '2026-04-10', end_date: '2026-04-14', preferences: { dietary: 'vegetarian', budget: 'budget', travelStyle: 'couple',     travelers: 2 } as Trip['preferences'], created_at: new Date().toISOString() },
+  { id: 'mock-2', user_id: '', destination: 'Bali, Indonesia',   start_date: '2026-05-20', end_date: '2026-05-26', preferences: { dietary: 'none',        budget: 'mid',    travelStyle: 'solo_male', travelers: 1 } as Trip['preferences'], created_at: new Date().toISOString() },
 ]
 
 // ─── Trip card ───────────────────────────────────────────────────────────────

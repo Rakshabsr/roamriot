@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  MapPin, Calendar, Users, Utensils, Wallet, Compass, Plane,
+  MapPin, Calendar, Users, Utensils, Wallet, Plane,
   Hotel, ArrowRight, ArrowLeft, Loader2, Youtube, Sparkles, Check, Clock
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -98,7 +98,7 @@ function WizardInner() {
   const [checkOut, setCheckOut]           = useState('11:00')
   // Step 4 — personal prefs
   const [dietary, setDietary]         = useState<DietaryPreference>('none')
-  const [travelStyle, setTravelStyle] = useState<TravelStyle>('comfort')
+  const [travelStyle, setTravelStyle] = useState<TravelStyle>('couple')
 
   const [generating, setGenerating] = useState(false)
   const [error, setError]           = useState('')
@@ -428,10 +428,34 @@ function WizardInner() {
             <div className="space-y-6">
               <div>
                 <p className="text-sea-500 font-semibold text-sm mb-2 flex items-center gap-1.5"><Sparkles size={14}/> Almost there!</p>
-                <h1 className="text-4xl font-extrabold text-slate-900 leading-tight">Your food & style</h1>
-                <p className="text-slate-400 mt-2">Last few things — we tailor every restaurant and activity to you.</p>
+                <h1 className="text-4xl font-extrabold text-slate-900 leading-tight">Who's travelling?</h1>
+                <p className="text-slate-400 mt-2">We'll adjust the tone, stops, and pace to match your group.</p>
               </div>
 
+              {/* Travel variant */}
+              <div>
+                <label className="label flex items-center gap-1.5"><Users size={13}/> Travel variant</label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {([
+                    { v:'couple',       l:'Couple',         e:'💑', d:'Romantic & intimate'     },
+                    { v:'three_friends',l:'Three friends',  e:'👯', d:'Fun trio energy'          },
+                    { v:'girls_gang',   l:'Girls gang',     e:'👩‍👩‍👧', d:'Gals-only adventure'      },
+                    { v:'boys_gang',    l:'Boys gang',      e:'👨‍👨‍👦', d:'Lads trip vibes'           },
+                    { v:'solo_female',  l:'Solo female',    e:'🦋', d:'Safe & curated for her'   },
+                    { v:'solo_male',    l:'Solo male',      e:'🎒', d:'Off the beaten path'      },
+                    { v:'family',       l:'Family friendly',e:'👨‍👩‍👧‍👦', d:'Kid-safe, all ages'        },
+                    { v:'senior',       l:'Senior friendly',e:'🌿', d:'Relaxed pace & comfort'  },
+                  ] as { v: TravelStyle; l: string; e: string; d: string }[]).map(o => (
+                    <OptionCard key={o.v} selected={travelStyle === o.v} onClick={() => setTravelStyle(o.v)}>
+                      <div className="text-2xl mb-1">{o.e}</div>
+                      <div className="font-bold text-slate-800 text-sm">{o.l}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{o.d}</div>
+                    </OptionCard>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dietary */}
               <div>
                 <label className="label flex items-center gap-1.5"><Utensils size={13}/> Food preference</label>
                 <div className="grid grid-cols-2 gap-2.5">
@@ -442,23 +466,6 @@ function WizardInner() {
                     { v:'jain',       l:'Jain',           e:'☯️', d:'No roots / no meat'   },
                   ] as { v: DietaryPreference; l: string; e: string; d: string }[]).map(o => (
                     <OptionCard key={o.v} selected={dietary === o.v} onClick={() => setDietary(o.v)}>
-                      <div className="text-2xl mb-1">{o.e}</div>
-                      <div className="font-bold text-slate-800 text-sm">{o.l}</div>
-                      <div className="text-xs text-slate-400 mt-0.5">{o.d}</div>
-                    </OptionCard>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="label flex items-center gap-1.5"><Compass size={13}/> Travel style</label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {([
-                    { v:'backpacker', l:'Backpacker', e:'🎒', d:'Raw & wild'   },
-                    { v:'comfort',    l:'Comfort',    e:'🌿', d:'Balanced'     },
-                    { v:'luxury',     l:'Luxury',     e:'🏨', d:'Premium'      },
-                  ] as { v: TravelStyle; l: string; e: string; d: string }[]).map(o => (
-                    <OptionCard key={o.v} selected={travelStyle === o.v} onClick={() => setTravelStyle(o.v)}>
                       <div className="text-2xl mb-1">{o.e}</div>
                       <div className="font-bold text-slate-800 text-sm">{o.l}</div>
                       <div className="text-xs text-slate-400 mt-0.5">{o.d}</div>
