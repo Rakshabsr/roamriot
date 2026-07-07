@@ -31,7 +31,7 @@ export async function PATCH(
     if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await req.json()
-    const ALLOWED = ['name', 'description', 'start_time', 'duration_minutes', 'tips', 'category']
+    const ALLOWED = ['name', 'description', 'start_time', 'duration_minutes', 'tips', 'category', 'notes']
     const patch = Object.fromEntries(
       Object.entries(body as Record<string, unknown>).filter(([k]) => ALLOWED.includes(k))
     )
