@@ -99,7 +99,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ─── Hero ─── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#1a0c05]">
         {/* Travel photo background */}
         <TravelBackground fixed />
 

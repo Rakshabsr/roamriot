@@ -2,24 +2,24 @@
 
 import { useEffect, useState } from 'react'
 
-// Curated picsum photo IDs — verified travel/landscape imagery
+// Seed-based picsum URLs — always work, return consistent landscape photos
 const PHOTOS = [
-  { id: '1285', label: 'Mountain Lake' },
-  { id: '1252', label: 'Tropical Coast' },
-  { id: '1320', label: 'Desert Dunes' },
-  { id: '1271', label: 'Ancient City' },
-  { id: '1287', label: 'Alpine Valley' },
-  { id: '1246', label: 'Scenic Cliffs' },
-  { id: '1268', label: 'River Canyon' },
-  { id: '1310', label: 'Ocean Horizon' },
-  { id: '1280', label: 'Forest Path' },
-  { id: '1257', label: 'Golden Plains' },
+  { id: 'mountain-lake-travel',    label: 'Mountain Lake'   },
+  { id: 'coastal-cliffs-sunset',   label: 'Coastal Cliffs'  },
+  { id: 'ancient-temple-mist',     label: 'Ancient Temple'  },
+  { id: 'desert-dunes-golden',     label: 'Desert Dunes'    },
+  { id: 'tropical-beach-turquoise',label: 'Tropical Beach'  },
+  { id: 'city-lights-aerial',      label: 'City Lights'     },
+  { id: 'green-valley-forest',     label: 'Green Valley'    },
+  { id: 'snowy-peaks-alpine',      label: 'Snowy Peaks'     },
+  { id: 'river-canyon-autumn',     label: 'River Canyon'    },
+  { id: 'old-town-evening-glow',   label: 'Old Town'        },
 ]
 
 const INTERVAL_MS = 8 * 1000  // rotate every 8 seconds
 
 function photoUrl(id: string) {
-  return `https://picsum.photos/id/${id}/1920/1080`
+  return `https://picsum.photos/seed/${id}/1920/1080`
 }
 
 export function TravelBackground({ className = '', fixed = false }: { className?: string; fixed?: boolean }) {
