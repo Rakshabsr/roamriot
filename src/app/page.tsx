@@ -100,8 +100,8 @@ export default function LandingPage() {
 
       {/* ─── Hero ─── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#1a0c05]">
-        {/* Travel photo background */}
-        <TravelBackground fixed />
+        {/* Travel photo background — absolute inside hero, not fixed */}
+        <TravelBackground />
 
         {/* Content */}
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center flex flex-col items-center gap-7 pt-16">
