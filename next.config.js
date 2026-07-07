@@ -1,22 +1,3 @@
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',  // only active in prod build
-  runtimeCaching: [
-    // Cache pages
-    {
-      urlPattern: /^https?.*/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'roamriot-pages',
-        networkTimeoutSeconds: 10,
-        expiration: { maxEntries: 50, maxAgeSeconds: 24 * 60 * 60 },
-      },
-    },
-  ],
-})
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -28,4 +9,4 @@ const nextConfig = {
   },
 }
 
-module.exports = withPWA(nextConfig)
+module.exports = nextConfig
