@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { MapPin, Sparkles, ArrowRight, ChevronRight, GripVertical, Heart, BookOpen, Map, Utensils } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TravelBackground } from '@/components/ui/TravelBackground'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 const features = [
   {
@@ -89,6 +90,7 @@ export default function LandingPage() {
             <span className="text-gradient">RoamRiot</span>
           </span>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link href="/login" className="text-sm font-medium text-slate-500 hover:text-sea-600 transition-colors">
               Sign in
             </Link>

@@ -9,6 +9,7 @@ import {
   Filter, Search, Calendar, ChevronRight, Sparkles, Globe
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type EventCategory = 'market' | 'music' | 'art' | 'food' | 'culture' | 'nightlife' | 'outdoor' | 'popup'
@@ -444,9 +445,12 @@ function EventsInner() {
               <MapPin size={9} /> {destination}
             </p>
           </div>
-          <Link href={tripId ? `/food?tripId=${tripId}` : '/food'} className="btn-ghost text-xs px-3 py-1.5 gap-1.5 flex-shrink-0">
-            <Utensils size={12} /> Food
-          </Link>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <ThemeToggle />
+            <Link href={tripId ? `/food?tripId=${tripId}` : '/food'} className="btn-ghost text-xs px-3 py-1.5 gap-1.5">
+              <Utensils size={12} /> Food
+            </Link>
+          </div>
         </div>
       </nav>
 

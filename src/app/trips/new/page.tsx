@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DietaryPreference, TravelStyle, BudgetRange, FlightDetails, HotelDetails } from '@/lib/types'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 const STEPS = [
   { label: 'Where',  icon: MapPin   },
@@ -240,6 +241,7 @@ function WizardInner() {
             </div>
           ))}
         </div>
+        <ThemeToggle />
       </nav>
 
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-6 py-12">

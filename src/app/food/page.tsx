@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Search, MapPin, Star, Clock, Leaf, Filter, ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 type DietFilter = 'all' | 'veg' | 'jain'
 type PriceFilter = 'all' | 'budget' | 'mid' | 'splurge'
@@ -144,7 +145,10 @@ function FoodFinderInner() {
           </Link>
           <span className="font-extrabold text-gradient text-lg">Food Finder</span>
           {loadingTrip && <Loader2 size={13} className="animate-spin text-sea-400" />}
-          <Link href={tripId ? `/events?tripId=${tripId}` : '/events'} className="ml-auto btn-ghost text-xs px-3 py-1.5">What&apos;s On</Link>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+            <Link href={tripId ? `/events?tripId=${tripId}` : '/events'} className="btn-ghost text-xs px-3 py-1.5">What&apos;s On</Link>
+          </div>
         </div>
       </nav>
 

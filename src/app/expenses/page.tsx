@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, Wallet, TrendingUp, AlertCircle, Check, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { ExpenseCategory } from '@/lib/types'
 
 interface Expense {
@@ -165,7 +166,8 @@ function ExpensesInner() {
           </Link>
           <span className="font-extrabold text-gradient text-lg">Budget Tracker</span>
           {saving && <Loader2 size={14} className="animate-spin text-sea-400 ml-1" />}
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <button onClick={() => setShowAdd(v => !v)} className="btn-primary text-xs px-4 py-2 gap-1.5">
               <Plus size={13} /> Add expense
             </button>

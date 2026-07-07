@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Plus, Trash2, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { TravelStyle } from '@/lib/types'
 
 interface PackingItem {
@@ -211,10 +212,13 @@ export default function PackingListPage({ params }: { params: { id: string } }) 
             <ArrowLeft size={13} /> Itinerary
           </Link>
           <span className="font-extrabold text-gradient text-lg">Packing List</span>
-          <button onClick={resetList}
-            className="ml-auto btn-ghost text-xs px-3 py-1.5 gap-1.5 text-slate-500 dark:text-slate-400">
-            <RefreshCw size={12} /> Reset
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+            <button onClick={resetList}
+              className="btn-ghost text-xs px-3 py-1.5 gap-1.5 text-slate-500 dark:text-slate-400">
+              <RefreshCw size={12} /> Reset
+            </button>
+          </div>
         </div>
       </nav>
 

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 function LoginForm() {
   const router = useRouter()
@@ -30,6 +31,7 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sea-50 via-white to-sage-50 dark:from-[#0a0f0e] dark:via-[#111a18] dark:to-[#0a0f0e] flex items-center justify-center px-6">
+      <div className="absolute top-4 right-4"><ThemeToggle /></div>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-extrabold text-gradient">RoamRiot</Link>
