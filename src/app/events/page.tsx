@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, MapPin, Clock, Ticket, Star, ExternalLink,
   Music, Palette, ShoppingBag, Utensils, Leaf, Zap, Heart,
@@ -288,7 +289,7 @@ function EventCard({ event }: { event: LocalEvent }) {
         </div>
 
         {/* Title */}
-        <h3 className="font-extrabold text-slate-900 text-base leading-tight mb-1">{event.name}</h3>
+        <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-base leading-tight mb-1">{event.name}</h3>
 
         {/* Time */}
         <p className="flex items-center gap-1 text-xs text-slate-400 mb-2">
@@ -305,7 +306,7 @@ function EventCard({ event }: { event: LocalEvent }) {
         </div>
 
         {/* Description (collapsed / expanded) */}
-        <p className={cn('text-sm text-slate-600 leading-relaxed', !expanded && 'line-clamp-2')}>
+        <p className={cn('text-sm text-slate-600 dark:text-slate-300 leading-relaxed', !expanded && 'line-clamp-2')}>
           {event.description}
         </p>
 
@@ -342,7 +343,10 @@ function EventCard({ event }: { event: LocalEvent }) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function EventsPage() {
+function EventsInner() {
+  const searchParams = useSearchParams()
+  const tripId = searchParams.get('tripId')
+
   const [search, setSearch]   = useState('')
   const [catFilter, setCatFilter] = useState<EventCategory | 'all'>('all')
   const [priceFilter, setPriceFilter] = useState<PriceType | 'all'>('all')
@@ -353,7 +357,37 @@ export default function EventsPage() {
   const [loading, setLoading]     = useState(false)
   const [comingSoon, setComingSoon] = useState(false)
 
+  const backHref = tripId ? `/trips/${tripId}` : '/dashboard'
+
   useEffect(() => {
+    // Priority 1: load from trip API (real trip context)
+    if (tripId) {
+      fetch(`/api/trips/${tripId}/meta`)
+        .then(r => r.json())
+        .then(data => {
+          const dest = data.trip?.destination as string | undefined
+          if (dest && dest.trim()) {
+            setDestination(dest)
+            setLoading(true)
+            setEvents([])
+            fetch(`/api/events?destination=${encodeURIComponent(dest)}`)
+              .then(r => r.json())
+              .then(d => {
+                if (d.events?.length > 0) {
+                  setEvents(d.events)
+                  setComingSoon(false)
+                } else {
+                  setComingSoon(true)
+                }
+              })
+              .catch(() => setComingSoon(true))
+              .finally(() => setLoading(false))
+          }
+        })
+        .catch(() => {})
+      return
+    }
+    // Priority 2: sessionStorage fallback (preview mode)
     try {
       const raw = sessionStorage.getItem('roamriot_itinerary')
       if (raw) {
@@ -380,7 +414,7 @@ export default function EventsPage() {
     } catch {
       // sessionStorage unavailable — keep Seoul defaults
     }
-  }, [])
+  }, [tripId])
 
   const filtered = events.filter(e => {
     if (search && !e.name.toLowerCase().includes(search.toLowerCase()) &&
@@ -399,18 +433,18 @@ export default function EventsPage() {
     <div className="min-h-screen bg-gradient-to-b from-sea-50 via-white to-white">
 
       {/* Nav */}
-      <nav className="bg-white/90 backdrop-blur-xl border-b border-sea-100 sticky top-0 z-10">
+      <nav className="bg-white/90 dark:bg-[#111a18]/90 backdrop-blur-xl border-b border-sea-100 dark:border-[#1e2f2b] sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/trips/preview" className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors flex-shrink-0">
+          <Link href={backHref} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors flex-shrink-0">
             <ArrowLeft size={15} className="text-slate-600" />
           </Link>
           <div className="flex-1 min-w-0">
-            <p className="font-extrabold text-slate-900 text-sm truncate">What&apos;s On</p>
+            <p className="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate">What&apos;s On</p>
             <p className="text-xs text-slate-400 truncate flex items-center gap-1">
               <MapPin size={9} /> {destination}
             </p>
           </div>
-          <Link href="/food" className="btn-ghost text-xs px-3 py-1.5 gap-1.5 flex-shrink-0">
+          <Link href={tripId ? `/food?tripId=${tripId}` : '/food'} className="btn-ghost text-xs px-3 py-1.5 gap-1.5 flex-shrink-0">
             <Utensils size={12} /> Food
           </Link>
         </div>
@@ -420,7 +454,7 @@ export default function EventsPage() {
 
         {/* Hero header */}
         <div className="mb-5">
-          <h1 className="text-3xl font-extrabold text-slate-900 leading-tight">
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight">
             What&apos;s happening in{' '}
             <span className="text-gradient">{cityName}</span>
           </h1>
@@ -478,7 +512,7 @@ export default function EventsPage() {
           </div>
           <button onClick={() => setShowFilters(v => !v)}
             className={cn('flex items-center gap-1.5 px-4 h-10 rounded-2xl text-sm font-bold border-2 transition-all',
-              showFilters ? 'border-sea-400 bg-sea-50 text-sea-700' : 'border-slate-200 text-slate-600 hover:border-sea-200')}>
+              showFilters ? 'border-sea-400 bg-sea-50 text-sea-700' : 'border-slate-200 text-slate-600 dark:text-slate-300 hover:border-sea-200')}>
             <Filter size={13} /> Filters
           </button>
         </div>
@@ -488,7 +522,7 @@ export default function EventsPage() {
           <div className="mb-5 p-4 rounded-3xl bg-white border border-slate-100 shadow-soft space-y-4 animate-fade-up">
             {/* Category */}
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Category</p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Category</p>
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => setCatFilter('all')}
                   className={cn('px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all',
@@ -500,7 +534,7 @@ export default function EventsPage() {
                   return (
                     <button key={c} onClick={() => setCatFilter(c === catFilter ? 'all' : c)}
                       className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all',
-                        catFilter === c ? 'border-sea-400 bg-sea-50 text-sea-700' : 'border-slate-200 text-slate-500 hover:border-sea-200')}>
+                        catFilter === c ? 'border-sea-400 bg-sea-50 text-sea-700' : 'border-slate-200 text-slate-500 dark:text-slate-400 hover:border-sea-200')}>
                       <Icon size={10} /> {label}
                     </button>
                   )
@@ -510,7 +544,7 @@ export default function EventsPage() {
 
             {/* Price */}
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Price</p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Price</p>
               <div className="flex gap-2">
                 {(['all', 'free', 'paid', 'donation'] as const).map(p => (
                   <button key={p} onClick={() => setPriceFilter(p)}
@@ -524,7 +558,7 @@ export default function EventsPage() {
 
             {/* Vibe */}
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Vibe</p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Vibe</p>
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => setVibeFilter('all')}
                   className={cn('px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all',
@@ -562,7 +596,7 @@ export default function EventsPage() {
                   'flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold border-2 transition-all',
                   catFilter === c
                     ? 'border-sea-400 bg-sea-500 text-white shadow-soft'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-sea-200 hover:bg-sea-50'
+                    : 'border-slate-200 bg-white text-slate-600 dark:text-slate-300 hover:border-sea-200 hover:bg-sea-50'
                 )}>
                 <Icon size={12} /> {label}
                 <span className={cn('text-[10px] font-bold ml-0.5', catFilter === c ? 'text-white/80' : 'text-slate-400')}>
@@ -578,7 +612,7 @@ export default function EventsPage() {
         {comingSoon && !loading && (
           <div className="card p-10 text-center mb-6">
             <p className="text-5xl mb-4">🗺️</p>
-            <h3 className="font-extrabold text-slate-900 text-lg mb-2">Events for {cityName} coming soon</h3>
+            <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-lg mb-2">Events for {cityName} coming soon</h3>
             <p className="text-slate-500 text-sm max-w-xs mx-auto leading-relaxed">
               We&apos;re working on real-time event data for {cityName}. Check back closer to your trip dates.
             </p>
@@ -593,7 +627,7 @@ export default function EventsPage() {
         {!comingSoon && filtered.length === 0 && !loading ? (
           <div className="card p-10 text-center">
             <p className="text-4xl mb-3">🔍</p>
-            <p className="font-bold text-slate-700">No events match your filters</p>
+            <p className="font-bold text-slate-700 dark:text-slate-200">No events match your filters</p>
             <button onClick={() => { setSearch(''); setCatFilter('all'); setPriceFilter('all'); setVibeFilter('all') }}
               className="mt-4 text-sm font-bold text-sea-600 hover:underline">
               Clear all filters
@@ -613,5 +647,13 @@ export default function EventsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function EventsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-sea-50" />}>
+      <EventsInner />
+    </Suspense>
   )
 }

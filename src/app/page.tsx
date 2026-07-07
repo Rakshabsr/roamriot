@@ -1,35 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { MapPin, Youtube, Utensils, Users, ArrowRight, Map, Sparkles, ChevronRight, GripVertical, Heart, BookOpen } from 'lucide-react'
+import { MapPin, Sparkles, ArrowRight, ChevronRight, GripVertical, Heart, BookOpen, Map, Utensils } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { TravelBackground } from '@/components/ui/TravelBackground'
 
 const features = [
-  {
-    icon: Youtube,
-    title: 'Built from real vlogs',
-    description: 'Every recommendation sourced from real YouTube travel content — with the video right beside each stop.',
-    color: 'from-red-400 to-rose-500',
-    bg: 'bg-red-50',
-  },
   {
     icon: Map,
     title: 'Live map view',
     description: 'Every stop plotted on an interactive map. Spot clusters, plan smart routes, never backtrack.',
-    color: 'from-sea-400 to-sea-600',
+    color: 'from-sea-500 to-sea-600',
     bg: 'bg-sea-50',
   },
   {
     icon: Utensils,
     title: 'Diet-aware planning',
     description: 'Veg, Jain, or vegan? Every food stop is filtered to match your preference — zero awkward moments.',
-    color: 'from-sage-400 to-sage-600',
+    color: 'from-sage-400 to-sage-500',
     bg: 'bg-sage-50',
   },
   {
     icon: Heart,
     title: 'Trip variants for every group',
-    description: 'Couple getaway, girls gang, family trip, solo female, senior friendly — itinerary tone and picks adapt to who\'s travelling.',
+    description: 'Couple getaway, girls gang, family trip, solo female, senior friendly — itinerary tone adapts to who\'s travelling.',
     color: 'from-pink-400 to-rose-400',
     bg: 'bg-pink-50',
   },
@@ -47,18 +42,48 @@ const features = [
     color: 'from-sand-400 to-sand-500',
     bg: 'bg-sand-50',
   },
+  {
+    icon: MapPin,
+    title: 'Real places, real routes',
+    description: 'Stops sourced from OpenStreetMap with Wikipedia context — actual places, not AI hallucinations.',
+    color: 'from-sea-400 to-sea-600',
+    bg: 'bg-sea-50',
+  },
 ]
 
 const destinations = ['Jaipur', 'Bali', 'Kyoto', 'Lisbon', 'Udaipur', 'Oaxaca']
 
 export default function LandingPage() {
   const [destination, setDestination] = useState('')
+  const [heroImage, setHeroImage]     = useState<string | null>(null)
+  const [imgLoaded, setImgLoaded]     = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!destination.trim() || destination.trim().length < 3) {
+      setHeroImage(null)
+      setImgLoaded(false)
+      return
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/unsplash?q=${encodeURIComponent(destination)}`)
+        const data = await res.json()
+        if (data.url) {
+          setImgLoaded(false)
+          setHeroImage(data.url)
+        }
+      } catch {}
+    }, 600)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [destination])
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#FEFCF8] dark:bg-[#0a0f0e] overflow-x-hidden">
 
       {/* ─── Nav ─── */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-sea-100">
+      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-[#111a18]/80 backdrop-blur-xl border-b border-sea-100 dark:border-[#1e2f2b]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <span className="text-xl font-extrabold tracking-tight">
             <span className="text-gradient">RoamRiot</span>
@@ -75,101 +100,103 @@ export default function LandingPage() {
       </nav>
 
       {/* ─── Hero ─── */}
-      <section className="relative pt-20 pb-24 px-6 overflow-hidden">
-        {/* Background blobs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-sea-200/30 rounded-full blur-3xl -z-10 pointer-events-none" />
-        <div className="absolute top-20 right-1/4 w-72 h-72 bg-sage-200/30 rounded-full blur-3xl -z-10 pointer-events-none" />
+      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-sea-900">
+        {/* Always-on rotating travel background */}
+        <TravelBackground fixed />
 
-        <div className="max-w-3xl mx-auto text-center">
-          {/* Pill badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sea-50 border border-sea-200 text-sea-700 text-xs font-semibold mb-8 animate-fade-up">
-            <Sparkles size={13} className="text-sand-400" />
-            AI-powered · built for every kind of traveller
+        {/* Destination photo overlay — fades in when user types */}
+        {heroImage && (
+          <>
+            <img
+              src={heroImage}
+              alt=""
+              className={cn(
+                'absolute inset-0 w-full h-full object-cover transition-opacity duration-700 pointer-events-none z-0',
+                imgLoaded ? 'opacity-100' : 'opacity-0',
+              )}
+              onLoad={() => setImgLoaded(true)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/70 pointer-events-none z-0" />
+          </>
+        )}
+
+        {/* Content */}
+        <div className="relative z-10 max-w-3xl mx-auto px-6 text-center flex flex-col items-center gap-6">
+
+          {/* Brand wordmark */}
+          <div className="animate-fade-up">
+            <div className="mb-3">
+              <span className="text-6xl sm:text-8xl font-extrabold tracking-tighter text-white [text-shadow:0_4px_24px_rgba(0,0,0,0.6)]">
+                Roam<span className="text-sage-300">Riot</span>
+              </span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/25 text-white/90 text-xs font-semibold tracking-wide">
+              <Sparkles size={11} className="text-sage-300" />
+              AI-powered travel planner · built for every kind of traveller
+            </div>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 tracking-tight leading-[1.08] mb-6 animate-fade-up" style={{animationDelay:'0.05s'}}>
-            Your trip, planned<br />
-            <span className="text-gradient">the smart way</span>
+          {/* Headline */}
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-white leading-tight [text-shadow:0_2px_16px_rgba(0,0,0,0.45)] animate-fade-up" style={{animationDelay:'0.08s'}}>
+            {destination && imgLoaded
+              ? <>Your trip to <span className="text-sage-300">{destination}</span>,<br />planned the smart way</>
+              : <>Your trip. Planned smart.<br />Enjoyed fully.</>
+            }
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-500 mb-10 max-w-xl mx-auto leading-relaxed animate-fade-up" style={{animationDelay:'0.1s'}}>
-            Tell RoamRiot where you're going, who's coming, and how you travel —
-            get a day-by-day itinerary with a live map, real transport options, and stops you'll actually want.
+          <p className="text-white/80 text-base sm:text-lg max-w-md leading-relaxed animate-fade-up [text-shadow:0_1px_8px_rgba(0,0,0,0.4)]" style={{animationDelay:'0.14s'}}>
+            Tell RoamRiot where you&apos;re going — get a day-by-day itinerary, live map, weather, currency, emergency info and more. All in one app.
           </p>
 
           {/* Search bar */}
-          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto animate-fade-up" style={{animationDelay:'0.15s'}}>
+          <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md animate-fade-up" style={{animationDelay:'0.18s'}}>
             <div className="relative flex-1">
-              <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-sea-400" />
+              <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-sea-300" />
               <input
-                className="input pl-10 h-13 text-base rounded-3xl shadow-soft"
-                placeholder="Where to?"
+                className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/30 text-white placeholder:text-white/50 text-base focus:outline-none focus:border-white/60 focus:bg-white/20 transition-all"
+                placeholder="Where to? e.g. Jaipur, Bali, Tokyo"
                 value={destination}
                 onChange={e => setDestination(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && (window.location.href = `/trips/new?destination=${encodeURIComponent(destination)}`)}
+                onKeyDown={e => e.key === 'Enter' && destination && (window.location.href = `/trips/new?destination=${encodeURIComponent(destination)}`)}
               />
             </div>
             <Link
               href={destination ? `/trips/new?destination=${encodeURIComponent(destination)}` : '/trips/new'}
-              className="btn-primary h-13 px-6 text-base rounded-3xl whitespace-nowrap justify-center"
+              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-sage-500 hover:bg-sage-400 text-white font-bold text-base whitespace-nowrap transition-colors shadow-lg"
             >
               Plan my trip <ArrowRight size={16} />
             </Link>
           </div>
 
-          {/* Destination chips */}
-          <div className="flex flex-wrap gap-2 justify-center mt-5 animate-fade-up" style={{animationDelay:'0.2s'}}>
+          {/* Quick destination chips */}
+          <div className="flex flex-wrap gap-2 justify-center animate-fade-up" style={{animationDelay:'0.22s'}}>
             {destinations.map(d => (
               <button
                 key={d}
                 onClick={() => setDestination(d)}
-                className={`px-3.5 py-1.5 rounded-full text-sm font-medium border-2 transition-all duration-150 ${
+                className={cn(
+                  'px-3.5 py-1.5 rounded-full text-sm font-medium border transition-all duration-150',
                   destination === d
-                    ? 'border-sea-400 bg-sea-50 text-sea-700 shadow-soft'
-                    : 'border-slate-200 text-slate-500 hover:border-sea-300 hover:text-sea-600'
-                }`}
+                    ? 'border-white bg-white/25 text-white backdrop-blur-sm'
+                    : 'border-white/30 text-white/70 hover:border-white/60 hover:text-white hover:bg-white/10'
+                )}
               >
                 {d}
               </button>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* ─── Map preview banner ─── */}
-      <section className="px-6 pb-16">
-        <div className="max-w-5xl mx-auto">
-          <div className="card p-1 shadow-lift overflow-hidden">
-            <div className="bg-gradient-to-br from-sea-500 to-sage-500 rounded-2xl aspect-[16/7] flex items-center justify-center relative overflow-hidden">
-              {/* Fake map grid */}
-              <div className="absolute inset-0 opacity-20"
-                style={{backgroundImage:'linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)', backgroundSize:'40px 40px'}} />
-              {/* Pins */}
-              {[
-                {x:'30%',y:'45%',label:'🏨 Hotel'},
-                {x:'45%',y:'30%',label:'🍽️ Lunch spot'},
-                {x:'60%',y:'55%',label:'📍 City Palace'},
-                {x:'72%',y:'38%',label:'✨ Sunset point'},
-              ].map((pin,i) => (
-                <div key={i} className="absolute" style={{left:pin.x, top:pin.y}}>
-                  <div className="bg-white rounded-2xl px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-lift whitespace-nowrap animate-fade-up" style={{animationDelay:`${0.1*i}s`}}>
-                    {pin.label}
-                  </div>
-                  <div className="w-3 h-3 bg-white rounded-full mx-auto mt-1 shadow-md" />
-                </div>
-              ))}
-              {/* Route line placeholder */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{opacity:0.4}}>
-                <polyline points="30%,50% 45%,35% 60%,60% 72%,43%" stroke="white" strokeWidth="2" strokeDasharray="6,4" fill="none" />
-              </svg>
-              <div className="text-white/60 text-sm font-medium z-10">Live interactive map — inside the app</div>
-            </div>
+        {/* Scroll hint */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce opacity-60">
+          <div className="w-6 h-10 rounded-full border-2 border-white/40 flex items-start justify-center pt-1.5">
+            <div className="w-1 h-2 rounded-full bg-white/70" />
           </div>
         </div>
       </section>
 
       {/* ─── Features ─── */}
-      <section className="py-16 px-6 bg-gradient-to-b from-sea-50/60 to-white">
+      <section className="py-16 px-6 bg-gradient-to-b from-sea-50/40 to-transparent">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-3">
@@ -193,18 +220,18 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Social proof / how it works ─── */}
+      {/* ─── How it works ─── */}
       <section className="py-20 px-6">
         <div className="max-w-2xl mx-auto">
           <div className="card p-10 shadow-lift bg-gradient-to-br from-sea-50 to-sage-50 border-sea-100 text-center">
-            <p className="text-sea-500 font-semibold text-sm mb-3 flex items-center justify-center gap-1.5">
+            <p className="text-sea-600 font-semibold text-sm mb-3 flex items-center justify-center gap-1.5">
               <Sparkles size={13} /> How it works
             </p>
             <h2 className="text-3xl font-extrabold text-slate-900 mb-8">Trip planned in 3 steps</h2>
             <div className="grid grid-cols-3 gap-4 text-left">
               {[
                 { n: '1', title: 'Tell us where', desc: 'Destination, dates, budget, who\'s coming.' },
-                { n: '2', title: 'We build it', desc: 'AI + real travel vlogs craft your day-by-day plan.' },
+                { n: '2', title: 'We build it',   desc: 'Real places from OpenStreetMap + AI craft your day-by-day plan.' },
                 { n: '3', title: 'Tweak & share', desc: 'Drag stops, delete, add — then share with your group.' },
               ].map(step => (
                 <div key={step.n} className="flex flex-col items-center text-center gap-2">

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#00a896"/>
+  <!-- Globe/Earth emoji-style icon -->
+  <circle cx="256" cy="256" r="180" fill="#0a7b6e"/>
+  <!-- Continents suggestion (simplified) -->
+  <ellipse cx="220" cy="200" rx="60" ry="45" fill="#1ebfaa" opacity="0.9"/>
+  <ellipse cx="300" cy="280" rx="55" ry="40" fill="#1ebfaa" opacity="0.9"/>
+  <ellipse cx="170" cy="310" rx="35" ry="28" fill="#1ebfaa" opacity="0.8"/>
+  <!-- RR monogram -->
+  <text x="256" y="290" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="120" fill="white" text-anchor="middle" opacity="0.95">RR</text>
+</svg>

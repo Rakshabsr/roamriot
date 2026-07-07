@@ -8,13 +8,22 @@
 
 @layer base {
   body {
-    @apply bg-sea-50 text-slate-800 antialiased;
+    @apply text-slate-800 dark:text-slate-100 antialiased;
+    background-color: #f4faf8;
     font-family: 'Inter', system-ui, sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  .dark body, body {
+    /* dark bg is set by html.dark */
+  }
+  html.dark {
+    background-color: #0a0f0e;
+    color-scheme: dark;
   }
   * { @apply box-border; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { @apply bg-transparent; }
-  ::-webkit-scrollbar-thumb { @apply bg-sea-200 rounded-full; }
+  ::-webkit-scrollbar-thumb { @apply bg-sea-200 dark:bg-sea-900 rounded-full; }
 }
 
 @layer components {
@@ -33,33 +42,34 @@
   }
   .btn-ghost {
     @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl font-medium text-sm
-           text-sea-700 bg-sea-50 border border-sea-100
-           hover:bg-sea-100 hover:border-sea-200
+           text-sea-700 dark:text-sea-300 bg-sea-50 dark:bg-sea-900/30 border border-sea-100 dark:border-sea-800/50
+           hover:bg-sea-100 dark:hover:bg-sea-900/50 hover:border-sea-200 dark:hover:border-sea-700
            transition-all duration-150;
   }
   .btn-outline {
     @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-sm
-           bg-white text-sea-700 border-2 border-sea-200
-           hover:border-sea-400 hover:shadow-soft hover:-translate-y-0.5
+           bg-white dark:bg-dark-surface text-sea-700 dark:text-sea-300 border-2 border-sea-200 dark:border-sea-800
+           hover:border-sea-400 dark:hover:border-sea-600 hover:shadow-soft hover:-translate-y-0.5
            transition-all duration-200;
   }
 
   /* ─── Cards ─── */
   .card {
-    @apply bg-white rounded-3xl border border-sea-100/60 shadow-soft;
+    @apply bg-white dark:bg-[#111a18] rounded-3xl border border-sea-100/60 dark:border-[#1e2f2b] shadow-soft dark:shadow-soft-dark;
   }
   .card-hover {
-    @apply card hover:shadow-lift hover:-translate-y-1 transition-all duration-200 cursor-pointer;
+    @apply card hover:shadow-lift dark:hover:shadow-lift-dark hover:-translate-y-1 transition-all duration-200 cursor-pointer;
   }
 
   /* ─── Inputs ─── */
   .input {
-    @apply w-full px-4 py-3 bg-white border-2 border-sea-100 rounded-2xl text-sm
-           focus:outline-none focus:border-sea-400 focus:ring-4 focus:ring-sea-100
-           placeholder:text-slate-400 transition-all duration-150;
+    @apply w-full px-4 py-3 bg-white dark:bg-[#172420] border-2 border-sea-100 dark:border-[#1e2f2b] rounded-2xl text-sm
+           text-slate-800 dark:text-slate-100
+           focus:outline-none focus:border-sea-400 dark:focus:border-sea-500 focus:ring-4 focus:ring-sea-100/60 dark:focus:ring-sea-900/40
+           placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all duration-150;
   }
   .label {
-    @apply block text-sm font-semibold text-slate-600 mb-2;
+    @apply block text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2;
   }
 
   /* ─── Badges ─── */
@@ -71,6 +81,22 @@
   .text-gradient {
     @apply bg-gradient-to-r from-sea-600 to-sage-500 bg-clip-text text-transparent;
   }
+  .dark .text-gradient {
+    @apply from-sea-400 to-sage-400;
+  }
+
+  /* ─── Page backgrounds ─── */
+  .page-bg {
+    @apply bg-gradient-to-b from-sea-50 dark:from-dark-bg via-white dark:via-dark-surface to-white dark:to-dark-bg;
+  }
+
+  /* ─── Aurora mesh background ─── */
+  .aurora-bg {
+    background: linear-gradient(135deg, #e6faf7 0%, #f4faf8 40%, #fdf8e8 100%);
+  }
+  .dark .aurora-bg {
+    background: linear-gradient(135deg, #0a0f0e 0%, #111a18 50%, #0f1409 100%);
+  }
 }
 
 /* ─── Map overrides ─── */
@@ -80,32 +106,89 @@
 }
 .leaflet-popup-content-wrapper {
   border-radius: 1rem !important;
-  box-shadow: 0 4px 24px rgba(8,145,178,0.15) !important;
-  border: 1px solid rgba(8,145,178,0.1);
+  box-shadow: 0 4px 24px rgba(0,168,150,0.15) !important;
+  border: 1px solid rgba(0,168,150,0.1);
+}
+.dark .leaflet-popup-content-wrapper {
+  background: #111a18 !important;
+  color: #e2e8f0 !important;
 }
 .leaflet-popup-tip { background: white !important; }
+.dark .leaflet-popup-tip { background: #111a18 !important; }
 .leaflet-control-zoom a {
   border-radius: 0.5rem !important;
-  color: #0891b2 !important;
+  color: #008a7b !important;
+}
+.dark .leaflet-control-zoom a {
+  background: #111a18 !important;
+  color: #4dd4c0 !important;
+  border-color: #1e2f2b !important;
 }
 
-/* ─── Hide scrollbars on pill tabs ─── */
+/* ─── Hide scrollbars ─── */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ─── Active press effect for interactive cards ─── */
+/* ─── Active press effect ─── */
 .card-hover:active, .btn-primary:active, .btn-outline:active, .btn-sage:active {
   transform: scale(0.98) translateY(1px);
 }
 
-/* ─── Smooth focus rings ─── */
+/* ─── Focus rings ─── */
 *:focus-visible {
   outline: 2px solid theme('colors.sea.400');
   outline-offset: 2px;
   border-radius: 0.5rem;
 }
 
-/* ─── dnd-kit drag: hide native drag ghost ─── */
+/* ─── dnd-kit drag ─── */
 [data-dnd-kit-dragging] {
   cursor: grabbing !important;
+}
+
+/* ─── Dark mode page backgrounds ─── */
+.dark .bg-white {
+  background-color: #111a18;
+}
+.dark .bg-slate-50 {
+  background-color: #0e1614;
+}
+.dark .bg-slate-100 {
+  background-color: #172420;
+}
+.dark .text-slate-900 {
+  color: #f1f5f4;
+}
+.dark .text-slate-800 {
+  color: #e2e8e5;
+}
+.dark .text-slate-700 {
+  color: #cdd6d3;
+}
+.dark .text-slate-600 {
+  color: #a8b5b2;
+}
+.dark .text-slate-500 {
+  color: #7a9490;
+}
+.dark .text-slate-400 {
+  color: #5a7470;
+}
+.dark .border-slate-100 {
+  border-color: #1e2f2b;
+}
+.dark .border-slate-200 {
+  border-color: #2a3f3a;
+}
+.dark .divide-slate-100 > * + * {
+  border-color: #1e2f2b;
+}
+
+/* ─── Smooth theme transition ─── */
+*, *::before, *::after {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.1s ease;
+}
+/* except animations — don't slow them down */
+[class*='animate-'], [class*='transition-'] {
+  transition-property: opacity, transform, box-shadow, background-color, border-color, color;
 }

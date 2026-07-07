@@ -1,19 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import {
   MapPin, Clock, Youtube, Wallet, Share2, Plus,
   Ticket, Train, Bus, Car, ChevronDown, Sparkles,
-  ArrowLeft, Check, Copy, Navigation, Plane, X,
+  ArrowLeft, Check, Copy, Navigation, Plane, X, Utensils, Users,
 } from 'lucide-react'
 import { ItineraryDay, Activity } from '@/lib/types'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { cn, formatDate, formatTime, categoryIcon } from '@/lib/utils'
 import type { MapActivity } from '@/components/trip/MapView'
 import { ActivityList } from '@/components/trip/ActivityList'
+import { WeatherStrip } from '@/components/trip/WeatherStrip'
+import { EmergencyCard } from '@/components/trip/EmergencyCard'
+import { CurrencyConverter } from '@/components/trip/CurrencyConverter'
+import { CollabModal } from '@/components/trip/CollabModal'
 import { Toast, ToastData } from '@/components/ui/Toast'
 import { TripWithDays } from '@/lib/supabase/queries'
+import { createClient } from '@/lib/supabase/client'
 
 const MapView = dynamic(() => import('@/components/trip/MapView'), {
   ssr: false,
@@ -198,13 +204,19 @@ function ReturnToAirportCard({ destination }: { destination: string }) {
   )
 }
 
-function ShareModal({ destination, startDate, endDate, days, onClose }: {
+function ShareModal({ destination, startDate, endDate, days, tripId, onClose }: {
   destination: string; startDate: string; endDate: string
-  days: ItineraryDay[]; onClose: () => void
+  days: ItineraryDay[]; tripId: string; onClose: () => void
 }) {
   const [copied, setCopied] = useState(false)
   const text = buildShareText(destination, startDate, endDate, days)
-  const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`
+  const encoded = encodeURIComponent(text)
+  const subject = encodeURIComponent(`Our trip to ${destination} — RoamRiot Itinerary`)
+
+  const waUrl     = `https://wa.me/?text=${encoded}`
+  const gmailUrl  = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${encoded}`
+  const smsUrl    = `sms:?body=${encoded}`
+  const printUrl  = `/trips/${tripId}/print`
 
   async function handleCopy() {
     await navigator.clipboard.writeText(text)
@@ -215,36 +227,73 @@ function ShareModal({ destination, startDate, endDate, days, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-6 sm:pb-0"
       onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 animate-pop" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-[#1a1814] rounded-3xl shadow-2xl w-full max-w-sm p-6 animate-pop" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-extrabold text-slate-900 text-lg">Share itinerary</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+          <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-lg">Share itinerary</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center justify-center transition-colors">
             <X size={15} className="text-slate-500" />
           </button>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2.5">
+          {/* WhatsApp */}
           <a href={waUrl} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-3 p-3.5 rounded-2xl bg-green-50 border border-green-100 hover:bg-green-100 transition-colors">
+            className="flex items-center gap-3 p-3.5 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
             <div className="w-10 h-10 rounded-2xl bg-green-500 flex items-center justify-center flex-shrink-0">
               <span className="text-white text-lg font-bold">W</span>
             </div>
             <div>
-              <p className="font-bold text-slate-900 text-sm">WhatsApp</p>
-              <p className="text-xs text-slate-500">Send your full itinerary to the group</p>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">WhatsApp</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Send to a group or friend</p>
             </div>
           </a>
-          <button onClick={handleCopy}
-            className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors text-left">
-            <div className="w-10 h-10 rounded-2xl bg-slate-200 flex items-center justify-center flex-shrink-0">
-              {copied ? <Check size={16} className="text-sage-600" /> : <Copy size={16} className="text-slate-600" />}
+          {/* Gmail */}
+          <a href={gmailUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3.5 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+            <div className="w-10 h-10 rounded-2xl bg-[#EA4335] flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-lg font-bold">G</span>
             </div>
             <div>
-              <p className="font-bold text-slate-900 text-sm">{copied ? 'Copied!' : 'Copy to clipboard'}</p>
-              <p className="text-xs text-slate-500">Paste into any message or note</p>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Gmail</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Email the itinerary to the group</p>
+            </div>
+          </a>
+          {/* SMS */}
+          <a href={smsUrl}
+            className="flex items-center gap-3 p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-lg">💬</span>
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">SMS / iMessage</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Text it to travel mates</p>
+            </div>
+          </a>
+          {/* Print */}
+          <a href={printUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <div className="w-10 h-10 rounded-2xl bg-slate-400 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-lg">🖨️</span>
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Print / Save as PDF</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Full itinerary, print-ready format</p>
+            </div>
+          </a>
+          {/* Copy */}
+          <button onClick={handleCopy}
+            className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left">
+            <div className="w-10 h-10 rounded-2xl bg-slate-200 dark:bg-slate-600 flex items-center justify-center flex-shrink-0">
+              {copied ? <Check size={16} className="text-sea-600" /> : <Copy size={16} className="text-slate-600 dark:text-slate-300" />}
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">{copied ? 'Copied!' : 'Copy to clipboard'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Paste into any app or note</p>
             </div>
           </button>
         </div>
-        <p className="text-center text-xs text-slate-400 mt-4">Includes all {days.length} days · {days.reduce((s, d) => s + d.activities.length, 0)} stops</p>
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
+          {days.length} days · {days.reduce((s, d) => s + d.activities.length, 0)} stops
+        </p>
       </div>
     </div>
   )
@@ -347,10 +396,52 @@ export default function TripView({ trip }: { trip: TripWithDays }) {
   const [activeActivityId, setActiveActivityId] = useState(trip.days[0]?.activities[0]?.id ?? '')
   const [showAddModal, setShowAddModal]         = useState(false)
   const [showShareModal, setShowShareModal]     = useState(false)
+  const [showCollabModal, setShowCollabModal]   = useState(false)
+  const [isOwner, setIsOwner]                   = useState(false)
   const [toast, setToast]                       = useState<ToastData | null>(null)
 
   const day = days[activeDay]
-  const { destination, start_date, end_date, id: tripId } = trip
+  const { destination, start_date, end_date, id: tripId, user_id } = trip
+
+  // Check if current user is the trip owner + subscribe to Realtime changes
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setIsOwner(user.id === user_id)
+    })
+
+    // Realtime: subscribe to activity updates on this trip's days
+    const dayIds = trip.days.map(d => d.id)
+    if (dayIds.length === 0) return
+
+    const channel = supabase
+      .channel(`trip-${tripId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'activities',
+        filter: `day_id=in.(${dayIds.join(',')})`,
+      }, (payload) => {
+        const act = payload.new as Activity | null
+        const oldAct = payload.old as { id: string } | null
+        setDays(prev => prev.map(d => {
+          if (!dayIds.includes(d.id)) return d
+          if (payload.eventType === 'INSERT' && act && act.day_id === d.id) {
+            return { ...d, activities: [...d.activities.filter(a => a.id !== act.id), act].sort((a, b) => a.order_index - b.order_index) }
+          }
+          if (payload.eventType === 'UPDATE' && act && act.day_id === d.id) {
+            return { ...d, activities: d.activities.map(a => a.id === act.id ? { ...a, ...act } : a) }
+          }
+          if (payload.eventType === 'DELETE' && oldAct) {
+            return { ...d, activities: d.activities.filter(a => a.id !== oldAct.id) }
+          }
+          return d
+        }))
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [tripId, user_id, trip.days])
 
   // Derive source videos from all activities
   const sourceVideos = days
@@ -431,11 +522,19 @@ export default function TripView({ trip }: { trip: TripWithDays }) {
           startDate={start_date}
           endDate={end_date}
           days={days}
+          tripId={tripId}
           onClose={() => setShowShareModal(false)}
         />
       )}
+      {showCollabModal && (
+        <CollabModal
+          tripId={tripId}
+          isOwner={isOwner}
+          onClose={() => setShowCollabModal(false)}
+        />
+      )}
       {/* ─── Nav ─── */}
-      <nav className="bg-white border-b border-sea-100 flex-shrink-0 z-20">
+      <nav className="bg-white dark:bg-[#111a18] border-b border-sea-100 dark:border-[#1e2f2b] flex-shrink-0 z-20">
         <div className="h-14 px-4 flex items-center gap-3">
           <Link href="/dashboard" className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors flex-shrink-0">
             <ArrowLeft size={15} className="text-slate-600" />
@@ -454,8 +553,14 @@ export default function TripView({ trip }: { trip: TripWithDays }) {
                 <Youtube size={10} /> {vlogCount} from vlogs
               </span>
             )}
-            <Link href="/expenses" className="btn-ghost text-xs px-3 py-1.5"><Wallet size={12} /> Budget</Link>
-            <Link href="/events" className="btn-ghost text-xs px-3 py-1.5"><Sparkles size={12} /> Events</Link>
+            <Link href={`/food?tripId=${tripId}`} className="btn-ghost text-xs px-3 py-1.5 hidden sm:flex"><Utensils size={12} /> Food</Link>
+            <Link href={`/expenses?tripId=${tripId}`} className="btn-ghost text-xs px-3 py-1.5"><Wallet size={12} /> Budget</Link>
+            <Link href={`/events?tripId=${tripId}`} className="btn-ghost text-xs px-3 py-1.5 hidden sm:flex"><Sparkles size={12} /> Events</Link>
+            <Link href={`/trips/${tripId}/packing`} className="btn-ghost text-xs px-3 py-1.5 hidden sm:flex"><span className="mr-1">🎒</span> Pack</Link>
+            <ThemeToggle />
+            <button onClick={() => setShowCollabModal(true)} className="btn-ghost text-xs px-3 py-1.5 hidden sm:flex">
+              <Users size={12} /> Collab
+            </button>
             <button onClick={() => setShowShareModal(true)} className="btn-ghost text-xs px-3 py-1.5">
               <Share2 size={12} /> Share
             </button>
@@ -489,8 +594,13 @@ export default function TripView({ trip }: { trip: TripWithDays }) {
         {/* LEFT — Timeline */}
         <div className="w-full sm:w-[360px] lg:w-[420px] flex-shrink-0 overflow-y-auto bg-white border-r border-sea-100">
 
+          {activeDay === 0 && (
+            <WeatherStrip destination={destination} startDate={start_date} endDate={end_date} />
+          )}
           {activeDay === 0 && <AirportTransferCard destination={destination} />}
           {activeDay === days.length - 1 && days.length > 1 && <ReturnToAirportCard destination={destination} />}
+          <CurrencyConverter destination={destination} />
+          <EmergencyCard destination={destination} />
 
           {/* Add stop button */}
           <div className="px-4 pb-2 flex items-center justify-between">

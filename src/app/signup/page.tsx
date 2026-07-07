@@ -32,7 +32,7 @@ export default function SignupPage() {
   }
 
   if (success) return (
-    <div className="min-h-screen bg-gradient-to-br from-sea-50 via-white to-sage-50 flex items-center justify-center px-6">
+    <div className="min-h-screen bg-gradient-to-br from-sea-50 via-white to-sage-50 dark:from-[#0a0f0e] dark:via-[#111a18] dark:to-[#0a0f0e] flex items-center justify-center px-6">
       <div className="text-center max-w-sm card p-10 shadow-card">
         <div className="text-5xl mb-4">✉️</div>
         <h2 className="text-xl font-extrabold text-slate-900 mb-2">Check your inbox</h2>
@@ -45,7 +45,7 @@ export default function SignupPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sea-50 via-white to-sage-50 flex items-center justify-center px-6">
+    <div className="min-h-screen bg-gradient-to-br from-sea-50 via-white to-sage-50 dark:from-[#0a0f0e] dark:via-[#111a18] dark:to-[#0a0f0e] flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-extrabold text-gradient">RoamRiot</Link>

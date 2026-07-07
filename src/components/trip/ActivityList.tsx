@@ -20,7 +20,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import {
   Clock, Youtube, ExternalLink, Star, Info, Play, ChevronDown,
-  ChevronUp, GripVertical, Trash2, Lock, Navigation,
+  ChevronUp, GripVertical, Trash2, Lock, Navigation, NotebookPen, Check,
 } from 'lucide-react'
 import { Activity, SourceVideo } from '@/lib/types'
 import { cn, formatTime, categoryColor, categoryIcon, youtubeWatchUrl } from '@/lib/utils'
@@ -89,15 +89,41 @@ function TravelStrip({ minutes }: { minutes: number }) {
 
 // ─── ActivityCard ─────────────────────────────────────────────────────────
 function ActivityCard({
-  activity, index, isLast, isActive, onClick, onDelete, dragHandleProps, isDragging,
+  activity, index, isLast, isActive, onClick, onDelete, dragHandleProps, isDragging, tripId,
 }: {
   activity: Activity; index: number; isLast: boolean; isActive: boolean
   onClick: () => void; onDelete: () => void
   dragHandleProps?: Record<string, unknown>
   isDragging?: boolean
+  tripId?: string
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [note, setNote]         = useState<string>('')
+  const [noteSaved, setNoteSaved] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const noteKey = `roamriot_note_${activity.id}`
+
+  // Load note from localStorage on first expand
+  useEffect(() => {
+    if (expanded && !note) {
+      const saved = localStorage.getItem(noteKey) ?? activity.notes ?? ''
+      setNote(saved)
+    }
+  }, [expanded, note, noteKey, activity.notes])
+
+  function saveNote() {
+    localStorage.setItem(noteKey, note)
+    setNoteSaved(true)
+    setTimeout(() => setNoteSaved(false), 1500)
+    // Persist to Supabase if we have tripId
+    if (tripId) {
+      fetch(`/api/trips/${tripId}/activities/${activity.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: note }),
+      }).catch(() => {/* silent */})
+    }
+  }
   const STRIP_COLORS: Record<string, string> = {
     food: 'bg-orange-400', attraction: 'bg-sea-500', experience: 'bg-sage-500',
     accommodation: 'bg-purple-500', transport: 'bg-slate-400', essentials: 'bg-red-400',
@@ -209,6 +235,35 @@ function ActivityCard({
                 {activity.source_videos.map(v => <VideoCard key={v.videoId} video={v} />)}
               </div>
             )}
+
+            {/* Quick notes */}
+            <div className="mt-1">
+              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                <NotebookPen size={10} /> My notes
+              </p>
+              <div className="relative">
+                <textarea
+                  className="w-full px-3 py-2.5 text-xs bg-white dark:bg-[#172420] border-2 border-sea-100 dark:border-[#1e2f2b] rounded-2xl text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none focus:border-sea-400 dark:focus:border-sea-600 resize-none transition-all"
+                  rows={2}
+                  placeholder="Add a quick note — booking ref, tips, what to bring…"
+                  value={note}
+                  onChange={e => { setNote(e.target.value); setNoteSaved(false) }}
+                  onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveNote() }}
+                />
+                <button
+                  onClick={saveNote}
+                  disabled={!note.trim()}
+                  className={cn(
+                    'absolute bottom-2 right-2 flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all',
+                    noteSaved
+                      ? 'bg-sage-100 dark:bg-sage-900/30 text-sage-700 dark:text-sage-400'
+                      : 'bg-sea-500 text-white hover:bg-sea-600 disabled:opacity-40 disabled:cursor-not-allowed'
+                  )}>
+                  {noteSaved ? <><Check size={9} /> Saved</> : 'Save'}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-1">Cmd+Enter to save · Stored on device + synced</p>
+            </div>
           </div>
         )}
       </div>
@@ -221,8 +276,9 @@ function SortableActivityCard(props: {
   activity: Activity; index: number; isLast: boolean; isActive: boolean
   onClick: () => void; onDelete: () => void
   activeId: string | null
+  tripId?: string
 }) {
-  const { activity, activeId, ...rest } = props
+  const { activity, activeId, tripId, ...rest } = props
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: activity.id })
 
   const style: React.CSSProperties = {
@@ -236,6 +292,7 @@ function SortableActivityCard(props: {
         activity={activity}
         dragHandleProps={!activity.is_fixed ? { ...attributes, ...listeners } : undefined}
         isDragging={activeId === activity.id}
+        tripId={tripId}
         {...rest}
       />
     </div>
@@ -347,6 +404,7 @@ export function ActivityList({
                     isActive={activity.id === activeActivityId}
                     onClick={() => onActivityClick(activity.id)}
                     onDelete={() => onDelete(activity.id)}
+                    tripId={tripId}
                   />
                   {!isLast && <TravelStrip minutes={seededMinutes(activity.id)} />}
                 </div>
@@ -363,6 +421,7 @@ export function ActivityList({
                   activeId={activeDragId}
                   onClick={() => onActivityClick(activity.id)}
                   onDelete={() => onDelete(activity.id)}
+                  tripId={tripId}
                 />
                 {!isLast && <TravelStrip minutes={seededMinutes(activity.id)} />}
               </div>

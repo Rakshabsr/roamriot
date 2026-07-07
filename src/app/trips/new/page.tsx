@@ -60,7 +60,7 @@ function OptionCard({ selected, onClick, children }: { selected: boolean; onClic
         'relative w-full text-left p-4 rounded-2xl border-2 transition-all duration-200',
         selected
           ? 'border-sea-400 bg-gradient-to-br from-sea-50 to-sea-100 shadow-soft scale-[1.02]'
-          : 'border-slate-200 bg-white hover:border-sea-200 hover:shadow-soft hover:scale-[1.01]'
+          : 'border-slate-200 bg-white dark:bg-[#1a1814] dark:border-slate-700 hover:border-sea-200 hover:shadow-soft hover:scale-[1.01]'
       )}>
       {selected && (
         <span className="absolute top-3 right-3 w-5 h-5 bg-sea-500 rounded-full flex items-center justify-center">
@@ -100,8 +100,9 @@ function WizardInner() {
   const [dietary, setDietary]         = useState<DietaryPreference>('none')
   const [travelStyle, setTravelStyle] = useState<TravelStyle>('couple')
 
-  const [generating, setGenerating] = useState(false)
-  const [error, setError]           = useState('')
+  const [generating, setGenerating]       = useState(false)
+  const [progressMsg, setProgressMsg]     = useState('')
+  const [error, setError]                 = useState('')
 
   const today   = new Date().toISOString().split('T')[0]
   const numDays = startDate && endDate
@@ -119,7 +120,7 @@ function WizardInner() {
   const activeTier = BUDGET_TIERS.find(t => t.v === budget) ?? BUDGET_TIERS[1]
 
   async function generate() {
-    setGenerating(true); setError('')
+    setGenerating(true); setError(''); setProgressMsg('Preparing your trip...')
     const flight: FlightDetails | undefined = hasFlight ? { airline, flightNumber: flightNum, departureCity, arrivalTime } : undefined
     const hotel: HotelDetails | undefined   = hasHotel  ? { name: hotelName, address: hotelAddress, checkInTime: checkIn, checkOutTime: checkOut } : undefined
     try {
@@ -128,13 +129,41 @@ function WizardInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ destination, startDate, endDate, preferences: { dietary, budget, travelStyle, travelers, flight, hotel } }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed')
-      sessionStorage.setItem('roamriot_itinerary', JSON.stringify({ ...data, destination, startDate, endDate }))
-      if (data.tripId) {
-        router.push(`/trips/${data.tripId}`)
-      } else {
-        router.push('/trips/preview')
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error((data as { error?: string }).error ?? 'Failed')
+      }
+
+      // Consume NDJSON stream — each line is a JSON event
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''   // keep incomplete trailing chunk
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+          const event = JSON.parse(line) as { type: string; message?: string; error?: string; tripId?: string; days?: unknown[]; sourceVideos?: unknown[] }
+          if (event.type === 'progress' && event.message) {
+            setProgressMsg(event.message)
+          } else if (event.type === 'error') {
+            throw new Error(event.error ?? 'Generation failed')
+          } else if (event.type === 'done') {
+            const data = event as { tripId?: string; days: unknown[]; sourceVideos: unknown[] }
+            sessionStorage.setItem('roamriot_itinerary', JSON.stringify({ ...data, destination, startDate, endDate }))
+            if (data.tripId) {
+              router.push(`/trips/${data.tripId}`)
+            } else {
+              router.push('/trips/preview')
+            }
+            return
+          }
+        }
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Something went wrong')
@@ -163,17 +192,24 @@ function WizardInner() {
           <Youtube size={28} className="absolute inset-0 m-auto text-sea-500" />
         </div>
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Building your itinerary…</h2>
+          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">Building your itinerary…</h2>
           <p className="text-slate-500 text-sm">
             Scanning vlogs for <strong className="text-sea-600">{destination}</strong> and building a{' '}
             <strong className="text-sea-600">{activeTier.label.toLowerCase()}</strong> {numDays > 0 ? `${numDays}-day` : ''} trip.
           </p>
         </div>
+        {/* Live progress from server stream */}
+        {progressMsg && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-[#1a1814] rounded-2xl border border-sea-100 dark:border-[#1e2f2b] shadow-soft">
+            <div className="w-2 h-2 rounded-full bg-sea-400 animate-pulse" />
+            <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{progressMsg}</span>
+          </div>
+        )}
         <div className="space-y-3">
-          {['Scanning YouTube travel vlogs', budgetLoadingLabel[budget], 'Scheduling 8 AM – 11 PM each day', 'Adding airport & hotel logistics'].map((t, i) => (
-            <div key={t} className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-sea-100 shadow-soft animate-fade-up" style={{animationDelay:`${i*0.15}s`}}>
-              <div className="w-2 h-2 rounded-full bg-sea-400 animate-pulse-soft" style={{animationDelay:`${i*0.3}s`}} />
-              <span className="text-sm text-slate-600">{t}</span>
+          {['Scheduling 8 AM – 11 PM each day', budgetLoadingLabel[budget], 'Adding airport & hotel logistics'].map((t, i) => (
+            <div key={t} className="flex items-center gap-3 px-4 py-3 bg-white/70 rounded-2xl border border-sea-100 shadow-soft animate-fade-up" style={{animationDelay:`${i*0.2 + 0.3}s`}}>
+              <div className="w-2 h-2 rounded-full bg-sea-200 animate-pulse" style={{animationDelay:`${i*0.3}s`}} />
+              <span className="text-sm text-slate-400 dark:text-slate-500">{t}</span>
             </div>
           ))}
         </div>
@@ -187,7 +223,7 @@ function WizardInner() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-sea-50 via-white to-sage-50">
       {/* Nav + step progress */}
-      <nav className="bg-white/80 backdrop-blur-xl border-b border-sea-100 px-6 h-16 flex items-center justify-between sticky top-0 z-10">
+      <nav className="bg-white/80 dark:bg-[#111a18]/80 backdrop-blur-xl border-b border-sea-100 dark:border-[#1e2f2b] px-6 h-16 flex items-center justify-between sticky top-0 z-10">
         <Link href="/" className="text-xl font-extrabold text-gradient">RoamRiot</Link>
         <div className="flex items-center gap-1.5">
           {STEPS.map((s, i) => (
@@ -196,7 +232,7 @@ function WizardInner() {
                 className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
                   i === step ? 'bg-sea-500 text-white shadow-soft' :
                   i < step   ? 'bg-sea-100 text-sea-700 cursor-pointer' :
-                               'bg-slate-100 text-slate-400 cursor-default')}>
+                               'bg-slate-100 text-slate-400 dark:text-slate-500 cursor-default')}>
                 {i < step ? <Check size={11} strokeWidth={3} /> : <s.icon size={11} />}
                 <span className="hidden sm:inline">{s.label}</span>
               </button>
@@ -214,7 +250,7 @@ function WizardInner() {
             <div className="space-y-7">
               <div>
                 <p className="text-sea-500 font-semibold text-sm mb-2 flex items-center gap-1.5"><MapPin size={14}/> Where to?</p>
-                <h1 className="text-4xl font-extrabold text-slate-900 leading-tight">Where's your next adventure?</h1>
+                <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight">Where's your next adventure?</h1>
                 <p className="text-slate-400 mt-2">We'll pull real travel vlogs to build your itinerary.</p>
               </div>
               <div className="relative">
@@ -229,7 +265,7 @@ function WizardInner() {
                   return (
                     <button key={d} onClick={() => setDestination(name)}
                       className={cn('px-4 py-2 rounded-full text-sm font-medium border-2 transition-all',
-                        destination === name ? 'border-sea-400 bg-sea-50 text-sea-700 shadow-soft' : 'border-slate-200 text-slate-600 hover:border-sea-200 hover:bg-sea-50')}>
+                        destination === name ? 'border-sea-400 bg-sea-50 text-sea-700 shadow-soft' : 'border-slate-200 text-slate-600 dark:text-slate-300 hover:border-sea-200 hover:bg-sea-50')}>
                       {d}
                     </button>
                   )
@@ -243,7 +279,7 @@ function WizardInner() {
             <div className="space-y-6">
               <div>
                 <p className="text-sea-500 font-semibold text-sm mb-2 flex items-center gap-1.5"><Wallet size={14}/> Set your budget</p>
-                <h1 className="text-4xl font-extrabold text-slate-900 leading-tight">
+                <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight">
                   What's your daily spend for <span className="text-gradient">{destination}</span>?
                 </h1>
                 <p className="text-slate-400 mt-2">This shapes every recommendation — stays, food, activities and more.</p>
@@ -265,8 +301,8 @@ function WizardInner() {
                       <span className="text-2xl mt-0.5">{tier.emoji}</span>
                       <div className="flex-1 min-w-0 pr-8">
                         <div className="flex items-baseline gap-2 flex-wrap">
-                          <span className="font-extrabold text-slate-900">{tier.label}</span>
-                          <span className="text-sm text-slate-500">{tier.subLabel}</span>
+                          <span className="font-extrabold text-slate-900 dark:text-slate-100">{tier.label}</span>
+                          <span className="text-sm text-slate-500 dark:text-slate-400">{tier.subLabel}</span>
                         </div>
                         <p className="text-xs font-bold text-sea-600 mt-0.5">{tier.daily} total daily spend</p>
                         <div className="flex flex-wrap gap-1.5 mt-2">
@@ -289,7 +325,7 @@ function WizardInner() {
             <div className="space-y-7">
               <div>
                 <p className="text-sea-500 font-semibold text-sm mb-2 flex items-center gap-1.5"><Calendar size={14}/> When?</p>
-                <h1 className="text-4xl font-extrabold text-slate-900 leading-tight">
+                <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight">
                   When are you heading to <span className="text-gradient">{destination}</span>?
                 </h1>
               </div>
@@ -322,9 +358,9 @@ function WizardInner() {
                 <label className="label flex items-center gap-1.5"><Users size={13}/> How many people?</label>
                 <div className="flex items-center gap-4 mt-1">
                   <button onClick={() => setTravelers(t => Math.max(1, t-1))} className="w-11 h-11 rounded-full border-2 border-slate-200 text-xl font-bold hover:border-sea-300 hover:bg-sea-50 transition-all flex items-center justify-center">−</button>
-                  <span className="text-3xl font-extrabold text-slate-900 w-8 text-center">{travelers}</span>
+                  <span className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 w-8 text-center">{travelers}</span>
                   <button onClick={() => setTravelers(t => Math.min(20, t+1))} className="w-11 h-11 rounded-full border-2 border-slate-200 text-xl font-bold hover:border-sea-300 hover:bg-sea-50 transition-all flex items-center justify-center">+</button>
-                  <span className="text-sm text-slate-500 font-medium">{travelers === 1 ? '🎒 Solo adventure' : `👥 ${travelers} people`}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">{travelers === 1 ? '🎒 Solo adventure' : `👥 ${travelers} people`}</span>
                 </div>
               </div>
             </div>
@@ -335,7 +371,7 @@ function WizardInner() {
             <div className="space-y-6">
               <div>
                 <p className="text-sea-500 font-semibold text-sm mb-2 flex items-center gap-1.5"><Plane size={14}/> Travel logistics</p>
-                <h1 className="text-4xl font-extrabold text-slate-900 leading-tight">Add your bookings</h1>
+                <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight">Add your bookings</h1>
                 <p className="text-slate-400 mt-2">We'll build Day 1 around your arrival and plan airport → hotel transport for you.</p>
               </div>
 
@@ -348,8 +384,8 @@ function WizardInner() {
                       <Plane size={18} className={hasFlight ? 'text-white' : 'text-slate-400'} />
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-slate-900 text-sm">Flight details</p>
-                      <p className="text-xs text-slate-400">Schedule Day 1 around your arrival time</p>
+                      <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Flight details</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Schedule Day 1 around your arrival time</p>
                     </div>
                   </div>
                   <div className={cn('w-12 h-6 rounded-full transition-all relative', hasFlight ? 'bg-sea-500' : 'bg-slate-200')}>
@@ -387,8 +423,8 @@ function WizardInner() {
                       <Hotel size={18} className={hasHotel ? 'text-white' : 'text-slate-400'} />
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-slate-900 text-sm">Hotel / accommodation</p>
-                      <p className="text-xs text-slate-400">Pin your base on the map and plan around it</p>
+                      <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Hotel / accommodation</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Pin your base on the map and plan around it</p>
                     </div>
                   </div>
                   <div className={cn('w-12 h-6 rounded-full transition-all relative', hasHotel ? 'bg-sage-500' : 'bg-slate-200')}>
@@ -418,7 +454,7 @@ function WizardInner() {
               </div>
 
               {!hasFlight && !hasHotel && (
-                <p className="text-center text-sm text-slate-400">No bookings yet? No problem — we'll build smart transport suggestions anyway.</p>
+                <p className="text-center text-sm text-slate-400 dark:text-slate-500">No bookings yet? No problem — we'll build smart transport suggestions anyway.</p>
               )}
             </div>
           )}
@@ -428,7 +464,7 @@ function WizardInner() {
             <div className="space-y-6">
               <div>
                 <p className="text-sea-500 font-semibold text-sm mb-2 flex items-center gap-1.5"><Sparkles size={14}/> Almost there!</p>
-                <h1 className="text-4xl font-extrabold text-slate-900 leading-tight">Who's travelling?</h1>
+                <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight">Who's travelling?</h1>
                 <p className="text-slate-400 mt-2">We'll adjust the tone, stops, and pace to match your group.</p>
               </div>
 
@@ -449,7 +485,7 @@ function WizardInner() {
                     <OptionCard key={o.v} selected={travelStyle === o.v} onClick={() => setTravelStyle(o.v)}>
                       <div className="text-2xl mb-1">{o.e}</div>
                       <div className="font-bold text-slate-800 text-sm">{o.l}</div>
-                      <div className="text-xs text-slate-400 mt-0.5">{o.d}</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{o.d}</div>
                     </OptionCard>
                   ))}
                 </div>
@@ -468,7 +504,7 @@ function WizardInner() {
                     <OptionCard key={o.v} selected={dietary === o.v} onClick={() => setDietary(o.v)}>
                       <div className="text-2xl mb-1">{o.e}</div>
                       <div className="font-bold text-slate-800 text-sm">{o.l}</div>
-                      <div className="text-xs text-slate-400 mt-0.5">{o.d}</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{o.d}</div>
                     </OptionCard>
                   ))}
                 </div>
@@ -478,8 +514,8 @@ function WizardInner() {
               <div className={cn('flex items-center gap-3 p-3 rounded-2xl border-2', activeTier.color)}>
                 <span className="text-xl">{activeTier.emoji}</span>
                 <div>
-                  <p className="font-bold text-slate-900 text-sm">{activeTier.label} budget locked in</p>
-                  <p className="text-xs text-slate-500">{activeTier.daily}/day · {activeTier.gets[0]}</p>
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">{activeTier.label} budget locked in</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{activeTier.daily}/day · {activeTier.gets[0]}</p>
                 </div>
                 <button onClick={() => setStep(1)} className="ml-auto text-xs font-semibold text-sea-600 hover:underline">Change</button>
               </div>
@@ -509,7 +545,7 @@ function WizardInner() {
 
 export default function NewTripPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-sea-50 flex items-center justify-center"><Loader2 className="animate-spin text-sea-500" size={32}/></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-sea-50 dark:bg-[#0a0f0e] flex items-center justify-center"><Loader2 className="animate-spin text-sea-500" size={32}/></div>}>
       <WizardInner />
     </Suspense>
   )

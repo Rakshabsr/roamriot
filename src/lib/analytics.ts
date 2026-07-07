@@ -1,32 +1,44 @@
-/**
- * RoamRiot Analytics
- * Logs usage events to Supabase analytics_events table.
- * All calls are fire-and-forget — never block the UI.
- */
+import { createClient } from '@/lib/supabase/client'
 
-export type AnalyticsEvent =
-  | { event: 'trip_generated';    destination: string; num_days: number; budget: string; travelers: number; travel_variant?: string }
-  | { event: 'page_view';         page: string; referrer?: string }
-  | { event: 'itinerary_viewed';  trip_id: string; destination: string; duration_seconds?: number }
-  | { event: 'destination_searched'; destination: string }
-  | { event: 'share_clicked';     destination: string }
-  | { event: 'activity_deleted';  trip_id: string }
-  | { event: 'activity_added';    trip_id: string }
-  | { event: 'signup_completed' }
-  | { event: 'login_completed' }
+type EventType = 'trip_generated' | 'itinerary_viewed' | 'destination_searched' | 'share_clicked'
 
-/**
- * Track an analytics event. Safe to call from any client component.
- * Silently swallows errors — never crashes the app.
- */
-export async function track(payload: AnalyticsEvent): Promise<void> {
+interface EventProperties {
+  destination?: string
+  num_days?: number
+  budget?: string
+  travelers?: number
+  trip_id?: string
+  duration_seconds?: number
+  share_method?: string
+  [key: string]: string | number | boolean | undefined
+}
+
+// Fire-and-forget — never throws, never blocks UI
+export function trackEvent(
+  type: EventType,
+  properties: EventProperties = {},
+) {
+  if (typeof window === 'undefined') return
   try {
-    await fetch('/api/analytics', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      const sid = getSessionId()
+      supabase.from('analytics_events').insert({
+        event_type:  type,
+        user_id:     data.user?.id ?? null,
+        session_id:  sid,
+        properties,
+      }).then(() => {})
     })
-  } catch {
-    // Silent — analytics must never break the user flow
+  } catch {}
+}
+
+function getSessionId(): string {
+  const key = 'roamriot_sid'
+  let sid = sessionStorage.getItem(key)
+  if (!sid) {
+    sid = Math.random().toString(36).slice(2) + Date.now().toString(36)
+    sessionStorage.setItem(key, sid)
   }
+  return sid
 }

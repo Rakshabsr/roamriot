@@ -5,10 +5,12 @@ import Link from 'next/link'
 import {
   Plus, MapPin, Calendar, LogOut, Utensils, Wallet,
   Clock, Users, Sparkles, ChevronRight, Star, Globe,
-  TrendingUp, Compass, Music
+  TrendingUp, Compass, Music, Navigation, Backpack
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Trip } from '@/lib/types'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { TravelBackground } from '@/components/ui/TravelBackground'
+import { Trip, ItineraryDay, Activity } from '@/lib/types'
 import { formatDate, getTripDays } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { TripCardSkeleton } from '@/components/ui/SkeletonCard'
@@ -203,9 +205,114 @@ function InspoRow() {
   )
 }
 
+// ─── Active trip "Today" banner ───────────────────────────────────────────────
+function todayActivities(days: ItineraryDay[]): { day: ItineraryDay; activities: Activity[] } | null {
+  const today = new Date().toISOString().split('T')[0]
+  const day = days.find(d => d.date === today)
+  if (!day || !day.activities.length) return null
+  return { day, activities: day.activities.slice(0, 4) }
+}
+
+function ActiveTripBanner({ trip }: { trip: Trip }) {
+  const [todayData, setTodayData] = useState<{ day: ItineraryDay; activities: Activity[] } | null>(null)
+  const [loadingToday, setLoadingToday] = useState(true)
+  const theme = getTheme(trip.destination)
+  const daysLeft = Math.ceil((new Date(trip.end_date).getTime() - Date.now()) / 86_400_000)
+
+  useEffect(() => {
+    fetch(`/api/trips/${trip.id}/meta`)
+      .then(() => {
+        // Fetch full trip data for today's activities
+        return fetch(`/api/trips/${trip.id}/today`)
+      })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.day) setTodayData(data)
+      })
+      .catch(() => {})
+      .finally(() => setLoadingToday(false))
+  }, [trip.id])
+
+  function categoryEmoji(cat: string) {
+    const map: Record<string, string> = {
+      food: '🍽️', attraction: '🏛️', transport: '🚌',
+      accommodation: '🏨', experience: '✨', essentials: '📌',
+    }
+    return map[cat] ?? '📍'
+  }
+
+  return (
+    <div className={cn('rounded-3xl overflow-hidden mb-6 shadow-lift border-2 border-sea-200 bg-gradient-to-br', theme.gradient)}>
+      {/* Header */}
+      <div className="px-5 pt-5 pb-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="inline-flex items-center gap-1.5 bg-white/30 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full mb-2">
+              <span className="w-2 h-2 bg-white rounded-full animate-pulse" /> You&apos;re on a trip!
+            </span>
+            <h2 className="text-2xl font-extrabold text-white leading-tight">{trip.destination.split(',')[0]}</h2>
+            <p className="text-white/80 text-sm mt-0.5">
+              {daysLeft <= 0 ? 'Last day!' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`} · ends {formatDate(trip.end_date)}
+            </p>
+          </div>
+          <span className="text-5xl">{theme.emoji}</span>
+        </div>
+      </div>
+
+      {/* Today's schedule */}
+      <div className="bg-white/95 backdrop-blur-sm mx-3 mb-3 rounded-2xl p-4">
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+          <Clock size={11} /> Today&apos;s schedule
+        </p>
+        {loadingToday ? (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-8 bg-slate-100 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : todayData ? (
+          <div className="space-y-2">
+            {todayData.activities.map(a => (
+              <div key={a.id} className="flex items-center gap-2.5">
+                <span className="text-base flex-shrink-0">{categoryEmoji(a.category)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{a.name}</p>
+                </div>
+                <span className="text-xs text-slate-400 flex-shrink-0 font-mono">{a.start_time}</span>
+              </div>
+            ))}
+            {todayData.activities.length === 4 && (
+              <p className="text-xs text-slate-400 text-center pt-1">+ more in itinerary</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-400 text-center py-2">No activities scheduled for today</p>
+        )}
+      </div>
+
+      {/* Quick action row */}
+      <div className="px-3 pb-4 grid grid-cols-4 gap-2">
+        {[
+          { href: `/trips/${trip.id}`, icon: Navigation, label: 'Itinerary', bg: 'bg-white/20' },
+          { href: `/food?tripId=${trip.id}`, icon: Utensils, label: 'Food', bg: 'bg-white/20' },
+          { href: `/expenses?tripId=${trip.id}`, icon: Wallet, label: 'Budget', bg: 'bg-white/20' },
+          { href: `/trips/${trip.id}/packing`, icon: Backpack, label: 'Packing', bg: 'bg-white/20' },
+        ].map(({ href, icon: Icon, label, bg }) => (
+          <Link key={href} href={href}
+            className={cn('flex flex-col items-center gap-1 py-2.5 rounded-2xl text-white transition-all hover:bg-white/30', bg)}>
+            <Icon size={18} />
+            <span className="text-[10px] font-bold">{label}</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const [trips, setTrips]   = useState<Trip[]>([])
+  const [activeTrip, setActiveTrip] = useState<Trip | null>(null)
   const [user, setUser]     = useState<{ email?: string; user_metadata?: { full_name?: string } } | null>(null)
   const [loading, setLoading] = useState(true)
   const [useMock, setUseMock] = useState(false)
@@ -223,6 +330,10 @@ export default function DashboardPage() {
             .order('created_at', { ascending: false })
           if (data && data.length > 0) {
             setTrips(data)
+            // Detect active trip (today is between start and end date)
+            const today = new Date().toISOString().split('T')[0]
+            const active = data.find((t: Trip) => t.start_date <= today && t.end_date >= today)
+            if (active) setActiveTrip(active)
           } else {
             setTrips(MOCK_TRIPS)
             setUseMock(true)
@@ -261,7 +372,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-b from-sea-50 via-white to-white">
 
       {/* Nav */}
-      <nav className="bg-white/90 backdrop-blur-xl border-b border-sea-100 sticky top-0 z-10">
+      <nav className="bg-white/90 dark:bg-[#111a18]/90 backdrop-blur-xl border-b border-sea-100 dark:border-[#1e2f2b] sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-1.5">
             <span className="text-xl">🌍</span>
@@ -274,6 +385,7 @@ export default function DashboardPage() {
               className="btn-primary text-xs px-4 py-2 gap-1.5 hidden sm:flex">
               <Plus size={13} /> New trip
             </Link>
+            <ThemeToggle />
             <button onClick={handleLogout}
               className="btn-ghost text-xs px-3 py-1.5 gap-1.5 text-slate-500">
               <LogOut size={13} /> Sign out
@@ -284,25 +396,33 @@ export default function DashboardPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-6">
 
-        {/* Hero greeting */}
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold text-slate-900">
-              {greet}, {name} 👋
-            </h1>
-            <p className="text-slate-500 text-sm mt-1">
-              {useMock
-                ? 'Here are some demo trips — create your own to get started!'
-                : trips.length === 0
-                  ? 'Ready to plan your next adventure?'
-                  : `You have ${trips.length} trip${trips.length > 1 ? 's' : ''} planned. Where to next?`}
-            </p>
+        {/* Hero greeting — rotating travel background */}
+        <div className="relative -mx-4 px-4 pt-8 pb-10 mb-6 rounded-3xl overflow-hidden bg-gradient-to-br from-sea-700 to-sea-900">
+          <TravelBackground />
+          <div className="relative z-10 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-extrabold text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.4)]">
+                {greet}, {name} 👋
+              </h1>
+              <p className="text-white/90 text-sm mt-1 [text-shadow:0_1px_4px_rgba(0,0,0,0.4)]">
+                {useMock
+                  ? 'Here are some demo trips — create your own to get started!'
+                  : trips.length === 0
+                    ? 'Ready to plan your next adventure?'
+                    : `You have ${trips.length} trip${trips.length > 1 ? 's' : ''} planned. Where to next?`}
+              </p>
+            </div>
+            <Link href="/trips/new"
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white text-sm px-4 py-2 rounded-xl font-semibold flex-shrink-0 flex items-center gap-1.5 transition-colors sm:hidden">
+              <Plus size={14} /> Plan
+            </Link>
           </div>
-          <Link href="/trips/new"
-            className="btn-primary text-sm px-5 py-2.5 gap-2 flex-shrink-0 sm:hidden">
-            <Plus size={14} /> Plan
-          </Link>
         </div>
+
+        {/* Active trip hero — only shown when a trip is happening right now */}
+        {!loading && activeTrip && !useMock && (
+          <ActiveTripBanner trip={activeTrip} />
+        )}
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
