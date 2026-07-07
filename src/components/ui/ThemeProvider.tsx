@@ -17,8 +17,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Initialise from localStorage or system preference
   useEffect(() => {
     const stored = localStorage.getItem('roamriot_theme') as Theme | null
-    // Default to dark if no preference stored
-    const preferred: Theme = stored ?? 'dark'
+    const preferred: Theme = stored ?? 'light'
     setTheme(preferred)
     applyTheme(preferred)
   }, [])

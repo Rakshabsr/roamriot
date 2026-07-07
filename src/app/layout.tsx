@@ -19,14 +19,13 @@ export const metadata: Metadata = {
 }
 
 // Prevent flash of wrong theme — runs before React hydrates
-// Default to dark mode unless user has explicitly chosen light
+// Default to light mode; only apply dark if user has explicitly chosen it
 const themeScript = `
 (function() {
   try {
     var t = localStorage.getItem('roamriot_theme');
-    if (!t) { t = 'dark'; localStorage.setItem('roamriot_theme', 'dark'); }
     if (t === 'dark') document.documentElement.classList.add('dark');
-  } catch(e) { document.documentElement.classList.add('dark'); }
+  } catch(e) {}
 })();
 `
 
