@@ -9,7 +9,7 @@
 @layer base {
   body {
     @apply text-slate-800 dark:text-slate-100 antialiased;
-    background-color: #f4faf8;
+    background-color: #FDFAF6;
     font-family: 'Inter', system-ui, sans-serif;
     transition: background-color 0.2s ease, color 0.2s ease;
   }
@@ -17,7 +17,7 @@
     /* dark bg is set by html.dark */
   }
   html.dark {
-    background-color: #0a0f0e;
+    background-color: #0f0a07;
     color-scheme: dark;
   }
   * { @apply box-border; }
@@ -79,7 +79,7 @@
 
   /* ─── Gradient text ─── */
   .text-gradient {
-    @apply bg-gradient-to-r from-sea-600 to-sage-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-sea-500 to-sage-500 bg-clip-text text-transparent;
   }
   .dark .text-gradient {
     @apply from-sea-400 to-sage-400;
@@ -125,6 +125,19 @@
   border-color: #1e2f2b !important;
 }
 
+/* ─── Ken Burns effect ─── */
+@keyframes ken-burns {
+  0%   { transform: scale(1.08) translate(0%, 0%); }
+  100% { transform: scale(1.0)  translate(-1%, -1%); }
+}
+.animate-ken-burns {
+  animation: ken-burns 10s ease-out forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* ─── Hide scrollbars ─── */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -148,13 +161,13 @@
 
 /* ─── Dark mode page backgrounds ─── */
 .dark .bg-white {
-  background-color: #111a18;
+  background-color: #1a110a;
 }
 .dark .bg-slate-50 {
-  background-color: #0e1614;
+  background-color: #150d08;
 }
 .dark .bg-slate-100 {
-  background-color: #172420;
+  background-color: #1f1510;
 }
 .dark .text-slate-900 {
   color: #f1f5f4;

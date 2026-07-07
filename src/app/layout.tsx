@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="bg-[#f4faf8] dark:bg-[#0a0f0e] transition-colors duration-200">
+      <body className="bg-[#FDFAF6] dark:bg-[#0f0a07] transition-colors duration-200">
         <ThemeProvider>
           <SessionGuard />
           {children}
